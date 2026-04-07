@@ -1,0 +1,214 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  SALES
+  FINANCE
+}
+
+enum QuoteStatus {
+  PENDING_REVIEW
+  ACCEPTED
+  REJECTED
+  NO_RESPONSE
+}
+
+enum PaymentType {
+  LUMP_SUM
+  INSTALLMENTS
+}
+
+enum InstallmentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum MovementType {
+  INFLOW
+  OUTFLOW
+  ADJUSTMENT
+}
+
+enum ExpenseLogStatus {
+  PENDING
+  PAID
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+model Client {
+  id         String   @id @default(cuid())
+  name       String
+  taxId      String   @unique
+  nationalId String?
+  address    String?
+  zipCode    String?
+  email      String?
+  phone      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  quotes     Quote[]
+}
+
+model Product {
+  id             String          @id @default(cuid())
+  name           String
+  basePrice      Int
+  markupPercent  Decimal         @db.Decimal(5, 2)
+  finalPrice     Int
+  unit           String?
+  stockQty       Int             @default(0)
+  minStock       Int?
+  isActive       Boolean         @default(true)
+  kitItems       KitItem[]
+  quoteItems     QuoteItem[]
+  stockMovements StockMovement[]
+}
+
+model Kit {
+  id         String      @id @default(cuid())
+  name       String
+  totalPrice Int
+  isActive   Boolean     @default(true)
+  items      KitItem[]
+  quoteItems QuoteItem[]
+}
+
+model KitItem {
+  id        String  @id @default(cuid())
+  kit       Kit     @relation(fields: [kitId], references: [id])
+  kitId     String
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+  quantity  Int
+}
+
+model Quote {
+  id              String         @id @default(cuid())
+  client          Client         @relation(fields: [clientId], references: [id])
+  clientId        String
+  status          QuoteStatus    @default(PENDING_REVIEW)
+  activeVersionId String?        @unique
+  activeVersion   QuoteVersion?  @relation("ActiveVersion", fields: [activeVersionId], references: [id])
+  versions        QuoteVersion[] @relation("AllVersions")
+  sale            Sale?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model QuoteVersion {
+  id        String      @id @default(cuid())
+  quote     Quote       @relation("AllVersions", fields: [quoteId], references: [id])
+  quoteId   String
+  activeFor Quote?      @relation("ActiveVersion")
+  version   Int
+  subtotal  Int
+  laborCost Int         @default(0)
+  discount  Int         @default(0)
+  total     Int
+  items     QuoteItem[]
+  createdAt DateTime    @default(now())
+}
+
+model QuoteItem {
+  id             String       @id @default(cuid())
+  quoteVersion   QuoteVersion @relation(fields: [quoteVersionId], references: [id])
+  quoteVersionId String
+  product        Product?     @relation(fields: [productId], references: [id])
+  productId      String?
+  kit            Kit?         @relation(fields: [kitId], references: [id])
+  kitId          String?
+  quantity       Int
+  unitPrice      Int
+  lineTotal      Int
+}
+
+model Sale {
+  id           String        @id @default(cuid())
+  quote        Quote         @relation(fields: [quoteId], references: [id])
+  quoteId      String        @unique
+  paymentType  PaymentType
+  downPayment  Int           @default(0)
+  total        Int
+  installments Installment[]
+  createdAt    DateTime      @default(now())
+}
+
+model Installment {
+  id          String            @id @default(cuid())
+  sale        Sale              @relation(fields: [saleId], references: [id])
+  saleId      String
+  dueDate     DateTime
+  amount      Int
+  status      InstallmentStatus @default(PENDING)
+  paidAt      DateTime?
+  transaction CashTransaction?
+}
+
+model CashTransaction {
+  id                String           @id @default(cuid())
+  type              TransactionType
+  amount            Int
+  date              DateTime
+  origin            String
+  description       String?
+  installmentId     String?          @unique
+  installment       Installment?     @relation(fields: [installmentId], references: [id])
+  fixedExpenseLogId String?          @unique
+  fixedExpenseLog   FixedExpenseLog? @relation(fields: [fixedExpenseLogId], references: [id])
+}
+
+model FixedExpense {
+  id       String            @id @default(cuid())
+  name     String
+  amount   Int
+  dueDay   Int
+  category String?
+  isActive Boolean           @default(true)
+  logs     FixedExpenseLog[]
+}
+
+model FixedExpenseLog {
+  id             String           @id @default(cuid())
+  fixedExpense   FixedExpense     @relation(fields: [fixedExpenseId], references: [id])
+  fixedExpenseId String
+  month          Int
+  year           Int
+  status         ExpenseLogStatus @default(PENDING)
+  paidAt         DateTime?
+  transaction    CashTransaction?
+}
+
+model StockMovement {
+  id        String       @id @default(cuid())
+  product   Product      @relation(fields: [productId], references: [id])
+  productId String
+  type      MovementType
+  quantity  Int
+  reason    String
+  createdAt DateTime     @default(now())
+}
