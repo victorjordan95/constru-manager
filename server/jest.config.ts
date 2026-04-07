@@ -7,6 +7,9 @@ const config: Config = {
   testMatch: ['**/*.test.ts'],
   setupFiles: ['../jest.setup.ts'],
   clearMocks: true,
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: './tsconfig.jest.json' }],
+  },
 };
 
 export default config;
