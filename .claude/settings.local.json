@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import subprocess; result = subprocess.run\\(['python', '-m', 'pip', 'show', 'python-docx'], capture_output=True, text=True\\); print\\(result.stdout or result.stderr\\)\")",
+      "Bash(python -m pip install python-docx -q)",
+      "Bash(python -c ':*)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(mkdir -p C:/freela/constru-manager/server)",
+      "Bash(npm init:*)",
+      "Bash(npx jest:*)",
+      "Bash(mkdir:*)",
+      "Bash(npx prisma:*)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('prisma', 'NOT FOUND'\\), indent=2\\)\\)\")",
+      "Bash(DATABASE_URL=\"postgresql://user:pass@localhost:5432/db\" npx prisma validate)",
+      "Bash(netstat -ano)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/constru_manager\" npx prisma migrate dev --name init)",
+      "Bash(cmd /c \"psql -U postgres -c \\\\\"SELECT current_user\\\\\" 2>&1\")",
+      "Bash(cmd /c \"psql --list 2>&1\")",
+      "Bash(cmd /c \"psql -U postgres -l 2>&1\")",
+      "Bash(where psql:*)",
+      "Bash(psql -U postgres -c \"SELECT version\\(\\);\")",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Bash(powershell -Command \"Get-Service postgresql* | Format-Table Name,Status\")",
+      "Bash(tasklist)",
+      "Bash(wmic process:*)",
+      "Bash(docker exec:*)",
+      "Bash(DATABASE_URL=\"postgresql://conduta:conduta123@localhost:5432/constru_manager\" npx prisma migrate dev --name init)",
+      "Bash(npx ts-node -e ':*)",
+      "Bash(node -e ':*)",
+      "Bash(npx ts-node:*)",
+      "Bash(curl -s http://localhost:3000/health)",
+      "Bash(kill %1)",
+      "Bash(node -r ts-node/register -e ':*)"
+    ]
+  }
+}
