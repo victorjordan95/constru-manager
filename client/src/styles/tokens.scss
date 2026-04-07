@@ -1,0 +1,44 @@
+// Design tokens — spec §16.2
+// Never hardcode hex values in components. Always reference these variables.
+
+:root {
+  // Primary
+  --color-primary:       #2C5282;
+  --color-primary-light: #4A90D9;
+  --color-primary-bg:    #EBF4FF;
+
+  // Status — Success
+  --color-success:       #276749;
+  --color-success-bg:    #F0FAF4;
+
+  // Status — Warning
+  --color-warning:       #B7791F;
+  --color-warning-bg:    #FFFBEA;
+
+  // Status — Danger
+  --color-danger:        #C53030;
+  --color-danger-bg:     #FFF0F0;
+
+  // Neutral
+  --color-neutral-900:   #1A202C;
+  --color-neutral-600:   #4A5568;
+  --color-neutral-300:   #CBD5E0;
+  --color-neutral-100:   #F7FAFC;
+  --color-surface:       #FFFFFF;
+
+  // Typography
+  --font-family: 'Inter', system-ui, sans-serif;
+  --font-size-base: 16px;
+
+  // Spacing (8px base grid)
+  --space-1:  8px;
+  --space-2:  16px;
+  --space-3:  24px;
+  --space-4:  32px;
+  --space-5:  40px;
+  --space-6:  48px;
+  --space-8:  64px;
+
+  // Sidebar
+  --sidebar-width: 240px;
+}
