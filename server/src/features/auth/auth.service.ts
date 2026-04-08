@@ -28,12 +28,27 @@ export function signRefreshToken(payload: JwtPayload): string {
   });
 }
 
+function assertJwtPayload(decoded: unknown): asserts decoded is JwtPayload {
+  if (
+    typeof decoded !== 'object' ||
+    decoded === null ||
+    typeof (decoded as JwtPayload).userId !== 'string' ||
+    typeof (decoded as JwtPayload).role !== 'string'
+  ) {
+    throw new Error('Invalid token payload');
+  }
+}
+
 export function verifyAccessToken(token: string): JwtPayload {
-  return jwt.verify(token, env.JWT_ACCESS_SECRET) as JwtPayload;
+  const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
+  assertJwtPayload(decoded);
+  return decoded;
 }
 
 export function verifyRefreshToken(token: string): JwtPayload {
-  return jwt.verify(token, env.JWT_REFRESH_SECRET) as JwtPayload;
+  const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET);
+  assertJwtPayload(decoded);
+  return decoded;
 }
 
 export function blacklistRefreshToken(token: string): void {

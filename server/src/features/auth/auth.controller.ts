@@ -84,7 +84,11 @@ export async function refresh(req: Request, res: Response, next: NextFunction): 
       res.status(401).json({ error: 'Refresh token expired', code: 'TOKEN_EXPIRED' });
       return;
     }
-    res.status(401).json({ error: 'Invalid token', code: 'INVALID_TOKEN' });
+    if (err instanceof Error && err.name === 'JsonWebTokenError') {
+      res.status(401).json({ error: 'Invalid token', code: 'INVALID_TOKEN' });
+      return;
+    }
+    next(err);
   }
 }
 
