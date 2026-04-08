@@ -1,9 +1,9 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../features/auth/auth.service';
 import { AuthenticatedRequest } from '../features/auth/auth.types';
 
 export function authenticate(
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction,
 ): void {
@@ -20,7 +20,7 @@ export function authenticate(
   const token = authHeader.slice(7);
 
   try {
-    req.user = verifyAccessToken(token);
+    (req as AuthenticatedRequest).user = verifyAccessToken(token);
     next();
   } catch {
     res.status(401).json({
