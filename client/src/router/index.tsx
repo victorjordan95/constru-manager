@@ -5,6 +5,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { decodeToken } from '@/lib/jwt'
 import { AppLayout } from '@/layouts/AppLayout'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { ClientsListPage } from '@/features/clients/ClientsListPage'
+import { ClientFormPage } from '@/features/clients/ClientFormPage'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -14,8 +16,6 @@ const loginRoute = createRoute({
   component: LoginPage,
 })
 
-// All authenticated routes descend from this route.
-// beforeLoad tries a silent refresh if no accessToken in memory.
 const authenticatedRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: '_authenticated',
@@ -50,9 +50,32 @@ const indexRoute = createRoute({
   ),
 })
 
+const clientsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/clients',
+  component: ClientsListPage,
+})
+
+const clientCreateRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/clients/new',
+  component: ClientFormPage,
+})
+
+const clientEditRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/clients/$id/edit',
+  component: ClientFormPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  authenticatedRoute.addChildren([indexRoute]),
+  authenticatedRoute.addChildren([
+    indexRoute,
+    clientsRoute,
+    clientCreateRoute,
+    clientEditRoute,
+  ]),
 ])
 
 export const router = createRouter({ routeTree })

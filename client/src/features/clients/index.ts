@@ -1,1 +1,2 @@
-// Clients feature public API — export components, hooks, types here as they are built
+export { ClientsListPage } from './ClientsListPage'
+export { ClientFormPage } from './ClientFormPage'
