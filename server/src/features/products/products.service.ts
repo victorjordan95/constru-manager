@@ -1,0 +1,63 @@
+import { Prisma } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
+import { CreateProductInput, UpdateProductInput } from './products.types';
+
+export function computeFinalPrice(basePrice: number, markupPercent: number): number {
+  return Math.round(basePrice * (1 + markupPercent / 100));
+}
+
+export function listProducts() {
+  return prisma.product.findMany({
+    where: { isActive: true },
+    orderBy: { name: 'asc' },
+  });
+}
+
+export function createProduct(data: CreateProductInput) {
+  const finalPrice = computeFinalPrice(data.basePrice, data.markupPercent);
+  return prisma.product.create({
+    data: {
+      name: data.name,
+      basePrice: data.basePrice,
+      markupPercent: data.markupPercent,
+      finalPrice,
+      unit: data.unit,
+      minStock: data.minStock,
+      stockQty: 0,
+    },
+  });
+}
+
+export async function updateProduct(id: string, data: UpdateProductInput) {
+  const current = await prisma.product.findUnique({ where: { id } });
+  if (!current) return null;
+
+  const basePrice = data.basePrice ?? current.basePrice;
+  const markupPercent =
+    data.markupPercent !== undefined ? data.markupPercent : current.markupPercent.toNumber();
+  const finalPrice = computeFinalPrice(basePrice, markupPercent);
+
+  try {
+    return await prisma.product.update({
+      where: { id },
+      data: { ...data, markupPercent, finalPrice },
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+      return null;
+    }
+    throw err;
+  }
+}
+
+export async function softDeleteProduct(id: string): Promise<boolean> {
+  try {
+    await prisma.product.update({ where: { id }, data: { isActive: false } });
+    return true;
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+      return false;
+    }
+    throw err;
+  }
+}
