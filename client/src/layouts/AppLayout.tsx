@@ -1,5 +1,6 @@
 import { Outlet, Link, useNavigate } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/authStore'
+import { queryClient } from '@/lib/queryClient'
 import { logout as apiLogout } from '@/features/auth/api'
 
 export function AppLayout() {
@@ -12,6 +13,7 @@ export function AppLayout() {
     } catch {
       // ignore — still clear local auth
     }
+    queryClient.clear()
     clearAuth()
     void navigate({ to: '/login' })
   }
