@@ -1,7 +1,15 @@
 import axios from 'axios'
+import type { AxiosError } from 'axios'
 import { config } from '@/config/env'
 import { useAuthStore } from '@/stores/authStore'
 import { decodeToken } from '@/lib/jwt'
+
+// Augment Axios config to include _retry sentinel for 401-refresh logic
+declare module 'axios' {
+  interface InternalAxiosRequestConfig {
+    _retry?: boolean
+  }
+}
 
 export const api = axios.create({
   baseURL: config.apiBaseUrl,
@@ -27,7 +35,7 @@ function processQueue(err: unknown, token: string | null) {
 api.interceptors.response.use(
   (r) => r,
   async (error: unknown) => {
-    const axiosError = error as { response?: { status: number }; config?: { _retry?: boolean; headers?: Record<string, string> } & object }
+    const axiosError = error as AxiosError
     const orig = axiosError.config
     if (!orig || axiosError.response?.status !== 401 || orig._retry) {
       return Promise.reject(error)
@@ -35,7 +43,7 @@ api.interceptors.response.use(
     if (isRefreshing) {
       return new Promise<string>((resolve, reject) => queue.push({ resolve, reject })).then(
         (t) => {
-          if (orig.headers) orig.headers.Authorization = `Bearer ${t}`
+          orig.headers.Authorization = `Bearer ${t}`
           return api(orig)
         },
       )
@@ -51,7 +59,7 @@ api.interceptors.response.use(
       const { accessToken } = data
       useAuthStore.getState().setAuth(accessToken, decodeToken(accessToken))
       processQueue(null, accessToken)
-      if (orig.headers) orig.headers.Authorization = `Bearer ${accessToken}`
+      orig.headers.Authorization = `Bearer ${accessToken}`
       return api(orig)
     } catch (e) {
       processQueue(e, null)
