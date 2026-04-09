@@ -7,6 +7,7 @@ import { healthRouter } from './routes/health';
 import { authRouter } from './features/auth/auth.routes';
 import { clientsRouter } from './features/clients/clients.routes';
 import { productsRouter } from './features/products/products.routes';
+import { kitsRouter } from './features/kits/kits.routes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -21,6 +22,7 @@ app.use('/health', healthRouter);
 app.use('/auth', authRouter);
 app.use('/clients', clientsRouter);
 app.use('/products', productsRouter);
+app.use('/kits', kitsRouter);
 
 // Centralized error handler — must be last
 app.use(errorHandler);
