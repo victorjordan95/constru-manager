@@ -7,6 +7,8 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { ClientsListPage } from '@/features/clients/ClientsListPage'
 import { ClientFormPage } from '@/features/clients/ClientFormPage'
+import { ProductsListPage } from '@/features/products/ProductsListPage'
+import { ProductFormPage } from '@/features/products/ProductFormPage'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -68,6 +70,24 @@ const clientEditRoute = createRoute({
   component: ClientFormPage,
 })
 
+const productsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/products',
+  component: ProductsListPage,
+})
+
+const productCreateRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/products/new',
+  component: ProductFormPage,
+})
+
+const productEditRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/products/$id/edit',
+  component: ProductFormPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authenticatedRoute.addChildren([
@@ -75,6 +95,9 @@ const routeTree = rootRoute.addChildren([
     clientsRoute,
     clientCreateRoute,
     clientEditRoute,
+    productsRoute,
+    productCreateRoute,
+    productEditRoute,
   ]),
 ])
 
