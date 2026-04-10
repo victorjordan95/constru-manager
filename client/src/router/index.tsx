@@ -9,6 +9,8 @@ import { ClientsListPage } from '@/features/clients/ClientsListPage'
 import { ClientFormPage } from '@/features/clients/ClientFormPage'
 import { ProductsListPage } from '@/features/products/ProductsListPage'
 import { ProductFormPage } from '@/features/products/ProductFormPage'
+import { KitsListPage } from '@/features/kits/KitsListPage'
+import { KitFormPage } from '@/features/kits/KitFormPage'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -88,6 +90,24 @@ const productEditRoute = createRoute({
   component: ProductFormPage,
 })
 
+const kitsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/kits',
+  component: KitsListPage,
+})
+
+const kitCreateRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/kits/new',
+  component: KitFormPage,
+})
+
+const kitEditRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/kits/$id/edit',
+  component: KitFormPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authenticatedRoute.addChildren([
@@ -98,6 +118,9 @@ const routeTree = rootRoute.addChildren([
     productsRoute,
     productCreateRoute,
     productEditRoute,
+    kitsRoute,
+    kitCreateRoute,
+    kitEditRoute,
   ]),
 ])
 

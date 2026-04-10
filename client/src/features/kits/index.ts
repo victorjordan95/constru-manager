@@ -1,1 +1,2 @@
-// Kits feature public API — export components, hooks, types here as they are built
+export { KitsListPage } from './KitsListPage'
+export { KitFormPage } from './KitFormPage'

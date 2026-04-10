@@ -51,24 +51,21 @@ export function AppLayout() {
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
           {(user?.role === 'SALES' || user?.role === 'ADMIN') && (
             <li>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <Link to={'/clients' as any} style={linkStyle}>
+              <Link to="/clients" style={linkStyle}>
                 Clientes
               </Link>
             </li>
           )}
           {(user?.role === 'SALES' || user?.role === 'ADMIN') && (
             <li>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <Link to={'/products' as any} style={linkStyle}>
+              <Link to="/products" style={linkStyle}>
                 Produtos
               </Link>
             </li>
           )}
           {user?.role === 'ADMIN' && (
             <li>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <Link to={'/kits' as any} style={linkStyle}>
+              <Link to="/kits" style={linkStyle}>
                 Kits
               </Link>
             </li>
