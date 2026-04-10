@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useKit, useCreateKit, useUpdateKit } from './hooks'
 import { useProducts } from '@/features/products/hooks'
@@ -6,9 +6,12 @@ import { formatCurrency } from '@/lib/format'
 import type { KitItemPayload } from './types'
 
 interface ItemRow {
+  _key: number      // stable identity for React key (never sent to server)
   productId: string
-  quantity: number
+  quantity: string  // string while user types; parsed on submit
 }
+
+const emptyRow = (key: number): ItemRow => ({ _key: key, productId: '', quantity: '1' })
 
 export function KitFormPage() {
   const navigate = useNavigate()
@@ -22,34 +25,54 @@ export function KitFormPage() {
   const updateMutation = useUpdateKit()
 
   const [name, setName] = useState('')
-  const [items, setItems] = useState<ItemRow[]>([{ productId: '', quantity: 1 }])
+  const [items, setItems] = useState<ItemRow[]>([emptyRow(0)])
+  const [nextKey, setNextKey] = useState(1)
   const [serverError, setServerError] = useState<string | null>(null)
 
   useEffect(() => {
     if (existing) {
       setName(existing.name)
       setItems(
-        existing.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+        existing.items.map((i, idx) => ({
+          _key: idx,
+          productId: i.productId,
+          quantity: String(i.quantity),
+        })),
       )
+      setNextKey(existing.items.length)
+    } else if (!isEdit) {
+      setName('')
+      setItems([emptyRow(0)])
+      setNextKey(1)
+      setServerError(null)
     }
-  }, [existing])
+  }, [existing, isEdit])
 
-  // Compute total price preview from current items and loaded product prices
-  const productPriceMap = new Map(products?.map((p) => [p.id, p.finalPrice]) ?? [])
-  const previewTotal = items.reduce((sum, row) => {
-    const price = productPriceMap.get(row.productId) ?? 0
-    return sum + price * row.quantity
-  }, 0)
+  const productPriceMap = useMemo(
+    () => new Map(products?.map((p) => [p.id, p.finalPrice]) ?? []),
+    [products],
+  )
+
+  const previewTotal = useMemo(
+    () =>
+      items.reduce((sum, row) => {
+        const qty = parseInt(row.quantity, 10)
+        const price = productPriceMap.get(row.productId) ?? 0
+        return sum + (isNaN(qty) ? 0 : price * qty)
+      }, 0),
+    [items, productPriceMap],
+  )
 
   function addItem() {
-    setItems((prev) => [...prev, { productId: '', quantity: 1 }])
+    setItems((prev) => [...prev, emptyRow(nextKey)])
+    setNextKey((k) => k + 1)
   }
 
   function removeItem(index: number) {
     setItems((prev) => prev.filter((_, i) => i !== index))
   }
 
-  function updateItem(index: number, patch: Partial<ItemRow>) {
+  function updateItem(index: number, patch: Partial<Omit<ItemRow, '_key'>>) {
     setItems((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)))
   }
 
@@ -57,9 +80,9 @@ export function KitFormPage() {
     e.preventDefault()
     setServerError(null)
 
-    const validItems: KitItemPayload[] = items.filter(
-      (row) => row.productId && row.quantity >= 1,
-    )
+    const validItems: KitItemPayload[] = items
+      .map((row) => ({ productId: row.productId, quantity: parseInt(row.quantity, 10) }))
+      .filter((row) => row.productId && row.quantity >= 1)
 
     if (validItems.length === 0) {
       setServerError('Adicione pelo menos um item ao kit.')
@@ -133,7 +156,7 @@ export function KitFormPage() {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {items.map((row, index) => (
-              <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div key={row._key} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <select
                   value={row.productId}
                   onChange={(e) => updateItem(index, { productId: e.target.value })}
@@ -151,7 +174,7 @@ export function KitFormPage() {
                   type="number"
                   min="1"
                   value={row.quantity}
-                  onChange={(e) => updateItem(index, { quantity: parseInt(e.target.value, 10) || 1 })}
+                  onChange={(e) => updateItem(index, { quantity: e.target.value })}
                   required
                   style={{ ...inputStyle, width: 80 }}
                 />
