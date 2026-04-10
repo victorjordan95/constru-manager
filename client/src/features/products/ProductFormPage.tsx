@@ -49,8 +49,8 @@ export function ProductFormPage() {
   }, [existing, isEdit])
 
   // Preview finalPrice client-side: round(basePriceCents * (1 + markup/100))
-  const basePriceCents = Math.round(parseFloat(form.basePriceBrl || '0') * 100)
-  const markupNum = parseFloat(form.markupPercent || '0')
+  const basePriceCents = Math.round(parseFloat(form.basePriceBrl) * 100)
+  const markupNum = parseFloat(form.markupPercent)
   const previewFinalPrice = isNaN(basePriceCents) || isNaN(markupNum)
     ? 0
     : Math.round(basePriceCents * (1 + markupNum / 100))
@@ -76,7 +76,7 @@ export function ProductFormPage() {
       basePrice,
       markupPercent,
       ...(form.unit && { unit: form.unit }),
-      ...(form.minStock && { minStock: parseInt(form.minStock, 10) }),
+      ...(form.minStock !== '' && { minStock: parseInt(form.minStock, 10) }),
     }
 
     try {

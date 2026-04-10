@@ -65,7 +65,7 @@ export function ProductsListPage() {
           <tbody>
             {products?.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ padding: 'var(--space-3)', textAlign: 'center', color: 'var(--color-neutral-600)' }}>
+                <td colSpan={user?.role === 'ADMIN' ? 7 : 6} style={{ padding: 'var(--space-3)', textAlign: 'center', color: 'var(--color-neutral-600)' }}>
                   Nenhum produto cadastrado.
                 </td>
               </tr>
