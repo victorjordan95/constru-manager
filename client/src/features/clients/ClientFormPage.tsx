@@ -47,8 +47,11 @@ export function ClientFormPage() {
         email: existing.email ?? '',
         phone: existing.phone ?? '',
       })
+    } else if (!isEdit) {
+      setForm(empty)
+      setServerError(null)
     }
-  }, [existing])
+  }, [existing, isEdit])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

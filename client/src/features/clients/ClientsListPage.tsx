@@ -91,6 +91,7 @@ export function ClientsListPage() {
                     </Link>
                     {user?.role === 'ADMIN' && (
                       <button
+                        disabled={deleteMutation.isPending}
                         onClick={() => {
                           if (confirm(`Excluir "${client.name}"?`)) {
                             deleteMutation.mutate(client.id)
@@ -102,8 +103,9 @@ export function ClientsListPage() {
                           border: 'none',
                           padding: '4px 10px',
                           borderRadius: 4,
-                          cursor: 'pointer',
+                          cursor: deleteMutation.isPending ? 'not-allowed' : 'pointer',
                           fontSize: '0.875rem',
+                          opacity: deleteMutation.isPending ? 0.6 : 1,
                         }}
                       >
                         Excluir
