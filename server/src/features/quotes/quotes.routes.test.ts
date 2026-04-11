@@ -249,3 +249,67 @@ describe('GET /quotes/:id', () => {
     expect(res.status).toBe(401)
   })
 })
+
+// ─── POST /quotes/:id/versions ────────────────────────────────────────────────
+
+describe('POST /quotes/:id/versions', () => {
+  let quoteId: string
+
+  beforeAll(async () => {
+    const res = await request(app)
+      .post('/quotes')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ clientId, items: [{ productId, quantity: 1 }] })
+    quoteId = res.body.id
+    createdQuoteIds.push(quoteId)
+  })
+
+  it('adds revision v2, updates activeVersionId (ADMIN)', async () => {
+    const res = await request(app)
+      .post(`/quotes/${quoteId}/versions`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ items: [{ productId, quantity: 2 }], laborCost: 3000 })
+    expect(res.status).toBe(200)
+    // v2: subtotal = 24000; total = 24000 + 3000 = 27000
+    expect(res.body.activeVersion.version).toBe(2)
+    expect(res.body.activeVersion.total).toBe(27000)
+    expect(res.body.versions).toHaveLength(2)
+    expect(res.body.versions[0].version).toBe(1)
+    expect(res.body.versions[1].version).toBe(2)
+  })
+
+  it('adds revision v3 (SALES)', async () => {
+    const res = await request(app)
+      .post(`/quotes/${quoteId}/versions`)
+      .set('Authorization', `Bearer ${salesToken}`)
+      .send({ items: [{ kitId, quantity: 1 }] })
+    expect(res.status).toBe(200)
+    expect(res.body.activeVersion.version).toBe(3)
+    expect(res.body.versions).toHaveLength(3)
+  })
+
+  it('returns 400 INVALID_ITEM for unknown productId', async () => {
+    const res = await request(app)
+      .post(`/quotes/${quoteId}/versions`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ items: [{ productId: 'not-real', quantity: 1 }] })
+    expect(res.status).toBe(400)
+    expect(res.body.code).toBe('INVALID_ITEM')
+  })
+
+  it('returns 404 NOT_FOUND for unknown quoteId', async () => {
+    const res = await request(app)
+      .post('/quotes/nonexistent/versions')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ items: [{ productId, quantity: 1 }] })
+    expect(res.status).toBe(404)
+    expect(res.body.code).toBe('NOT_FOUND')
+  })
+
+  it('returns 401 without token', async () => {
+    const res = await request(app)
+      .post(`/quotes/${quoteId}/versions`)
+      .send({ items: [{ productId, quantity: 1 }] })
+    expect(res.status).toBe(401)
+  })
+})

@@ -151,11 +151,83 @@ export async function getQuote(id: string) {
   return { quote }
 }
 
-export async function addVersion(
-  _id: string,
-  _data: AddVersionInput,
-): Promise<{ error: string } | { quote: unknown }> {
-  return { error: 'NOT_FOUND' as const }
+export async function addVersion(id: string, data: AddVersionInput) {
+  const existing = await prisma.quote.findUnique({
+    where: { id },
+    include: { versions: { select: { version: true }, orderBy: { version: 'desc' } } },
+  })
+  if (!existing) return { error: 'NOT_FOUND' as const }
+
+  const productIds = data.items.filter((i) => i.productId).map((i) => i.productId!)
+  const kitIds = data.items.filter((i) => i.kitId).map((i) => i.kitId!)
+
+  const [products, kits] = await Promise.all([
+    productIds.length > 0
+      ? prisma.product.findMany({
+          where: { id: { in: productIds }, isActive: true },
+          select: { id: true, finalPrice: true },
+        })
+      : Promise.resolve([]),
+    kitIds.length > 0
+      ? prisma.kit.findMany({
+          where: { id: { in: kitIds }, isActive: true },
+          select: { id: true, totalPrice: true },
+        })
+      : Promise.resolve([]),
+  ])
+
+  const productPriceMap = new Map(products.map((p) => [p.id, p.finalPrice]))
+  const kitPriceMap = new Map(
+    (kits as { id: string; totalPrice: number }[]).map((k) => [k.id, k.totalPrice]),
+  )
+
+  const missingProductIds = productIds.filter((pid) => !productPriceMap.has(pid))
+  const missingKitIds = kitIds.filter((kid) => !kitPriceMap.has(kid))
+  if (missingProductIds.length > 0 || missingKitIds.length > 0) {
+    return { error: 'INVALID_ITEM' as const }
+  }
+
+  const itemsWithPrices = data.items.map((item) => {
+    const unitPrice = item.productId
+      ? productPriceMap.get(item.productId)!
+      : kitPriceMap.get(item.kitId!)!
+    return {
+      productId: item.productId ?? null,
+      kitId: item.kitId ?? null,
+      quantity: item.quantity,
+      unitPrice,
+      lineTotal: item.quantity * unitPrice,
+    }
+  })
+
+  const { subtotal, total } = computeVersionTotals(
+    itemsWithPrices.map((i) => i.lineTotal),
+    data.laborCost,
+    data.discount,
+  )
+
+  const nextVersion = (existing.versions[0]?.version ?? 0) + 1
+
+  const quote = await prisma.$transaction(async (tx) => {
+    const version = await tx.quoteVersion.create({
+      data: {
+        quoteId: id,
+        version: nextVersion,
+        subtotal,
+        laborCost: data.laborCost,
+        discount: data.discount,
+        total,
+        items: { create: itemsWithPrices },
+      },
+    })
+    return tx.quote.update({
+      where: { id },
+      data: { activeVersionId: version.id },
+      include: quoteDetailInclude,
+    })
+  })
+
+  return { quote }
 }
 
 export async function updateStatus(
