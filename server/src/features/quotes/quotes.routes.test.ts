@@ -379,3 +379,111 @@ describe('PATCH /quotes/:id/status', () => {
     expect(res.status).toBe(401)
   })
 })
+
+// ─── POST /quotes/:id/accept ──────────────────────────────────────────────────
+
+describe('POST /quotes/:id/accept', () => {
+  let lumpSumQuoteId: string
+  let installmentsQuoteId: string
+
+  beforeAll(async () => {
+    const [r1, r2] = await Promise.all([
+      request(app)
+        .post('/quotes')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ clientId, items: [{ productId, quantity: 2 }], laborCost: 1000 }),
+      request(app)
+        .post('/quotes')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ clientId, items: [{ productId, quantity: 1 }] }),
+    ])
+    lumpSumQuoteId = r1.body.id
+    installmentsQuoteId = r2.body.id
+    createdQuoteIds.push(lumpSumQuoteId, installmentsQuoteId)
+  })
+
+  it('accepts with LUMP_SUM — status ACCEPTED, sale created, no installments', async () => {
+    const res = await request(app)
+      .post(`/quotes/${lumpSumQuoteId}/accept`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ paymentType: 'LUMP_SUM', downPayment: 5000 })
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('ACCEPTED')
+    // subtotal = 12000*2 = 24000; total = 24000 + 1000 = 25000
+    expect(res.body.sale.total).toBe(25000)
+    expect(res.body.sale.paymentType).toBe('LUMP_SUM')
+    expect(res.body.sale.downPayment).toBe(5000)
+    expect(res.body.sale.installments).toHaveLength(0)
+  })
+
+  it('accepts with INSTALLMENTS — status ACCEPTED, sale + installments created', async () => {
+    const res = await request(app)
+      .post(`/quotes/${installmentsQuoteId}/accept`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        paymentType: 'INSTALLMENTS',
+        downPayment: 0,
+        installments: [
+          { dueDate: '2026-05-01T00:00:00.000Z', amount: 6000 },
+          { dueDate: '2026-06-01T00:00:00.000Z', amount: 6000 },
+        ],
+      })
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('ACCEPTED')
+    expect(res.body.sale.paymentType).toBe('INSTALLMENTS')
+    expect(res.body.sale.installments).toHaveLength(2)
+    expect(res.body.sale.installments[0].amount).toBe(6000)
+    expect(res.body.sale.installments[0].status).toBe('PENDING')
+  })
+
+  it('returns 400 ALREADY_ACCEPTED when quote is already accepted', async () => {
+    const res = await request(app)
+      .post(`/quotes/${lumpSumQuoteId}/accept`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ paymentType: 'LUMP_SUM' })
+    expect(res.status).toBe(400)
+    expect(res.body.code).toBe('ALREADY_ACCEPTED')
+  })
+
+  it('returns 400 NO_ACTIVE_VERSION when activeVersionId is null', async () => {
+    const createRes = await request(app)
+      .post('/quotes')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ clientId, items: [{ productId, quantity: 1 }] })
+    const tempId = createRes.body.id
+    createdQuoteIds.push(tempId)
+    // Manually null out activeVersionId to simulate the edge case
+    await prisma.quote.update({ where: { id: tempId }, data: { activeVersionId: null } })
+
+    const res = await request(app)
+      .post(`/quotes/${tempId}/accept`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ paymentType: 'LUMP_SUM' })
+    expect(res.status).toBe(400)
+    expect(res.body.code).toBe('NO_ACTIVE_VERSION')
+  })
+
+  it('returns 404 NOT_FOUND for unknown quoteId', async () => {
+    const res = await request(app)
+      .post('/quotes/nonexistent/accept')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ paymentType: 'LUMP_SUM' })
+    expect(res.status).toBe(404)
+    expect(res.body.code).toBe('NOT_FOUND')
+  })
+
+  it('returns 403 for SALES', async () => {
+    const res = await request(app)
+      .post(`/quotes/${lumpSumQuoteId}/accept`)
+      .set('Authorization', `Bearer ${salesToken}`)
+      .send({ paymentType: 'LUMP_SUM' })
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 401 without token', async () => {
+    const res = await request(app)
+      .post(`/quotes/${lumpSumQuoteId}/accept`)
+      .send({ paymentType: 'LUMP_SUM' })
+    expect(res.status).toBe(401)
+  })
+})

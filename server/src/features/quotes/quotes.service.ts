@@ -242,9 +242,49 @@ export async function updateStatus(id: string, data: UpdateStatusInput) {
   return { quote }
 }
 
-export async function acceptQuote(
-  _id: string,
-  _data: AcceptQuoteInput,
-): Promise<{ error: string } | { quote: unknown }> {
-  return { error: 'NOT_FOUND' as const }
+export async function acceptQuote(id: string, data: AcceptQuoteInput) {
+  const quote = await prisma.quote.findUnique({
+    where: { id },
+    include: {
+      activeVersion: true,
+      sale: true,
+    },
+  })
+  if (!quote) return { error: 'NOT_FOUND' as const }
+  if (quote.status === 'ACCEPTED') return { error: 'ALREADY_ACCEPTED' as const }
+  if (!quote.activeVersion) return { error: 'NO_ACTIVE_VERSION' as const }
+
+  const total = quote.activeVersion.total
+
+  await prisma.$transaction(async (tx) => {
+    await tx.sale.create({
+      data: {
+        quoteId: id,
+        paymentType: data.paymentType,
+        downPayment: data.downPayment,
+        total,
+        ...(data.installments && data.installments.length > 0
+          ? {
+              installments: {
+                create: data.installments.map((inst) => ({
+                  dueDate: new Date(inst.dueDate),
+                  amount: inst.amount,
+                })),
+              },
+            }
+          : {}),
+      },
+    })
+    await tx.quote.update({
+      where: { id },
+      data: { status: 'ACCEPTED' },
+    })
+  })
+
+  const updatedQuote = await prisma.quote.findUnique({
+    where: { id },
+    include: quoteDetailInclude,
+  })
+
+  return { quote: updatedQuote }
 }
