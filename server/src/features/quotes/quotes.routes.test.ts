@@ -313,3 +313,69 @@ describe('POST /quotes/:id/versions', () => {
     expect(res.status).toBe(401)
   })
 })
+
+// ─── PATCH /quotes/:id/status ─────────────────────────────────────────────────
+
+describe('PATCH /quotes/:id/status', () => {
+  let quoteId: string
+
+  beforeAll(async () => {
+    const res = await request(app)
+      .post('/quotes')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ clientId, items: [{ productId, quantity: 1 }] })
+    quoteId = res.body.id
+    createdQuoteIds.push(quoteId)
+  })
+
+  it('sets status to REJECTED (ADMIN)', async () => {
+    const res = await request(app)
+      .patch(`/quotes/${quoteId}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'REJECTED' })
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('REJECTED')
+  })
+
+  it('sets status back to PENDING_REVIEW (ADMIN)', async () => {
+    const res = await request(app)
+      .patch(`/quotes/${quoteId}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'PENDING_REVIEW' })
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('PENDING_REVIEW')
+  })
+
+  it('returns 400 VALIDATION_ERROR for invalid status value ACCEPTED', async () => {
+    const res = await request(app)
+      .patch(`/quotes/${quoteId}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'ACCEPTED' })
+    expect(res.status).toBe(400)
+    expect(res.body.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('returns 404 NOT_FOUND for unknown quoteId', async () => {
+    const res = await request(app)
+      .patch('/quotes/nonexistent/status')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'REJECTED' })
+    expect(res.status).toBe(404)
+    expect(res.body.code).toBe('NOT_FOUND')
+  })
+
+  it('returns 403 for SALES', async () => {
+    const res = await request(app)
+      .patch(`/quotes/${quoteId}/status`)
+      .set('Authorization', `Bearer ${salesToken}`)
+      .send({ status: 'REJECTED' })
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 401 without token', async () => {
+    const res = await request(app)
+      .patch(`/quotes/${quoteId}/status`)
+      .send({ status: 'REJECTED' })
+    expect(res.status).toBe(401)
+  })
+})

@@ -230,11 +230,16 @@ export async function addVersion(id: string, data: AddVersionInput) {
   return { quote }
 }
 
-export async function updateStatus(
-  _id: string,
-  _data: UpdateStatusInput,
-): Promise<{ error: 'NOT_FOUND' } | { quote: unknown }> {
-  return { error: 'NOT_FOUND' as const }
+export async function updateStatus(id: string, data: UpdateStatusInput) {
+  const existing = await prisma.quote.findUnique({ where: { id } })
+  if (!existing) return { error: 'NOT_FOUND' as const }
+
+  const quote = await prisma.quote.update({
+    where: { id },
+    data: { status: data.status },
+    include: quoteDetailInclude,
+  })
+  return { quote }
 }
 
 export async function acceptQuote(
