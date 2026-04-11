@@ -11,6 +11,13 @@ declare module 'axios' {
   }
 }
 
+// Callback set by App.tsx to redirect without a full page reload.
+// Falls back to window.location if not yet initialized (e.g. during tests).
+let _navigateToLogin: (() => void) | null = null
+export function setNavigateToLogin(fn: () => void) {
+  _navigateToLogin = fn
+}
+
 export const api = axios.create({
   baseURL: config.apiBaseUrl,
   withCredentials: true,
@@ -64,7 +71,7 @@ api.interceptors.response.use(
     } catch (e) {
       processQueue(e, null)
       useAuthStore.getState().clearAuth()
-      window.location.href = '/login'
+      _navigateToLogin ? _navigateToLogin() : (window.location.href = '/login')
       return Promise.reject(e)
     } finally {
       isRefreshing = false

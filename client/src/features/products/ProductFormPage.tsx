@@ -48,12 +48,13 @@ export function ProductFormPage() {
     }
   }, [existing, isEdit])
 
-  // Preview finalPrice client-side: round(basePriceCents * (1 + markup/100))
-  const basePriceCents = Math.round(parseFloat(form.basePriceBrl) * 100)
+  // Preview finalPrice client-side: round(base * 100 * (1 + markup/100))
+  const basePriceRaw = parseFloat(form.basePriceBrl)
   const markupNum = parseFloat(form.markupPercent)
-  const previewFinalPrice = isNaN(basePriceCents) || isNaN(markupNum)
-    ? 0
-    : Math.round(basePriceCents * (1 + markupNum / 100))
+  const previewFinalPrice =
+    isNaN(basePriceRaw) || isNaN(markupNum)
+      ? 0
+      : Math.round(basePriceRaw * 100 * (1 + markupNum / 100))
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

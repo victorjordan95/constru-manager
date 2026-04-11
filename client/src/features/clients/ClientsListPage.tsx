@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useClients, useDeleteClient } from './hooks'
 import { useAuthStore } from '@/stores/authStore'
@@ -6,6 +7,7 @@ export function ClientsListPage() {
   const { data: clients, isLoading, error } = useClients()
   const deleteMutation = useDeleteClient()
   const { user } = useAuthStore()
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   if (isLoading) return <p style={{ color: 'var(--color-neutral-600)' }}>Carregando...</p>
   if (error) return <p style={{ color: 'var(--color-danger)' }}>Erro ao carregar clientes.</p>
@@ -91,10 +93,13 @@ export function ClientsListPage() {
                     </Link>
                     {user?.role === 'ADMIN' && (
                       <button
-                        disabled={deleteMutation.isPending}
+                        disabled={deletingId === client.id}
                         onClick={() => {
                           if (confirm(`Excluir "${client.name}"?`)) {
-                            deleteMutation.mutate(client.id)
+                            setDeletingId(client.id)
+                            deleteMutation.mutate(client.id, {
+                              onSettled: () => setDeletingId(null),
+                            })
                           }
                         }}
                         style={{
@@ -103,9 +108,9 @@ export function ClientsListPage() {
                           border: 'none',
                           padding: '4px 10px',
                           borderRadius: 4,
-                          cursor: deleteMutation.isPending ? 'not-allowed' : 'pointer',
+                          cursor: deletingId === client.id ? 'not-allowed' : 'pointer',
                           fontSize: '0.875rem',
-                          opacity: deleteMutation.isPending ? 0.6 : 1,
+                          opacity: deletingId === client.id ? 0.6 : 1,
                         }}
                       >
                         Excluir
