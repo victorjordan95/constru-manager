@@ -142,8 +142,13 @@ export async function listQuotes() {
   })
 }
 
-export async function getQuote(_id: string): Promise<{ error: 'NOT_FOUND' } | { quote: unknown }> {
-  return { error: 'NOT_FOUND' as const }
+export async function getQuote(id: string) {
+  const quote = await prisma.quote.findUnique({
+    where: { id },
+    include: quoteDetailInclude,
+  })
+  if (!quote) return { error: 'NOT_FOUND' as const }
+  return { quote }
 }
 
 export async function addVersion(

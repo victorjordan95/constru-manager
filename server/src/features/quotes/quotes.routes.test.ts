@@ -157,3 +157,95 @@ describe('POST /quotes', () => {
     expect(res.status).toBe(401)
   })
 })
+
+// ─── GET /quotes ──────────────────────────────────────────────────────────────
+
+describe('GET /quotes', () => {
+  it('returns 200 array for ADMIN', async () => {
+    const res = await request(app)
+      .get('/quotes')
+      .set('Authorization', `Bearer ${adminToken}`)
+    expect(res.status).toBe(200)
+    expect(Array.isArray(res.body)).toBe(true)
+  })
+
+  it('returns 200 array for SALES', async () => {
+    const res = await request(app)
+      .get('/quotes')
+      .set('Authorization', `Bearer ${salesToken}`)
+    expect(res.status).toBe(200)
+    expect(Array.isArray(res.body)).toBe(true)
+  })
+
+  it('returns 401 without token', async () => {
+    const res = await request(app).get('/quotes')
+    expect(res.status).toBe(401)
+  })
+
+  it('each item has client and activeVersion summary', async () => {
+    const createRes = await request(app)
+      .post('/quotes')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ clientId, items: [{ productId, quantity: 1 }] })
+    createdQuoteIds.push(createRes.body.id)
+
+    const res = await request(app)
+      .get('/quotes')
+      .set('Authorization', `Bearer ${adminToken}`)
+    const found = res.body.find((q: { id: string }) => q.id === createRes.body.id)
+    expect(found).toBeDefined()
+    expect(found.client.id).toBe(clientId)
+    expect(found.activeVersion.total).toBe(12000)
+  })
+})
+
+// ─── GET /quotes/:id ──────────────────────────────────────────────────────────
+
+describe('GET /quotes/:id', () => {
+  let quoteId: string
+
+  beforeAll(async () => {
+    const res = await request(app)
+      .post('/quotes')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ clientId, items: [{ productId, quantity: 3 }], laborCost: 1000 })
+    quoteId = res.body.id
+    createdQuoteIds.push(quoteId)
+  })
+
+  it('returns full quote with versions and items (ADMIN)', async () => {
+    const res = await request(app)
+      .get(`/quotes/${quoteId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+    expect(res.status).toBe(200)
+    expect(res.body.id).toBe(quoteId)
+    expect(res.body.client.id).toBe(clientId)
+    expect(res.body.versions).toHaveLength(1)
+    expect(res.body.versions[0].version).toBe(1)
+    // subtotal = 12000*3 = 36000; total = 36000 + 1000 = 37000
+    expect(res.body.versions[0].total).toBe(37000)
+    expect(res.body.versions[0].items).toHaveLength(1)
+    expect(res.body.sale).toBeNull()
+  })
+
+  it('returns full quote for SALES', async () => {
+    const res = await request(app)
+      .get(`/quotes/${quoteId}`)
+      .set('Authorization', `Bearer ${salesToken}`)
+    expect(res.status).toBe(200)
+    expect(res.body.id).toBe(quoteId)
+  })
+
+  it('returns 404 NOT_FOUND for unknown id', async () => {
+    const res = await request(app)
+      .get('/quotes/nonexistent-id')
+      .set('Authorization', `Bearer ${adminToken}`)
+    expect(res.status).toBe(404)
+    expect(res.body.code).toBe('NOT_FOUND')
+  })
+
+  it('returns 401 without token', async () => {
+    const res = await request(app).get(`/quotes/${quoteId}`)
+    expect(res.status).toBe(401)
+  })
+})
