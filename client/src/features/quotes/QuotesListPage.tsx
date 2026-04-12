@@ -68,7 +68,7 @@ export function QuotesListPage() {
               </tr>
             )}
             {quotes?.map((q) => {
-              const colors = STATUS_COLOR[q.status]
+              const colors = STATUS_COLOR[q.status] ?? { bg: 'var(--color-neutral-100)', text: 'var(--color-neutral-600)' }
               return (
                 <tr key={q.id} style={{ borderTop: '1px solid var(--color-neutral-300)' }}>
                   <td style={tdStyle}>{q.client.name}</td>
@@ -84,7 +84,7 @@ export function QuotesListPage() {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {STATUS_LABEL[q.status]}
+                      {STATUS_LABEL[q.status] ?? q.status}
                     </span>
                   </td>
                   <td style={{ ...tdStyle, color: 'var(--color-neutral-600)' }}>
