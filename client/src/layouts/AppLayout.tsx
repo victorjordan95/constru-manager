@@ -70,6 +70,13 @@ export function AppLayout() {
               </Link>
             </li>
           )}
+          {(user?.role === 'SALES' || user?.role === 'ADMIN') && (
+            <li>
+              <Link to="/quotes" style={linkStyle}>
+                Orçamentos
+              </Link>
+            </li>
+          )}
         </ul>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: 'var(--space-2)' }}>
           <p style={{ fontSize: '0.75rem', marginBottom: 4, opacity: 0.7 }}>{user?.role}</p>

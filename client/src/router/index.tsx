@@ -11,6 +11,10 @@ import { ProductsListPage } from '@/features/products/ProductsListPage'
 import { ProductFormPage } from '@/features/products/ProductFormPage'
 import { KitsListPage } from '@/features/kits/KitsListPage'
 import { KitFormPage } from '@/features/kits/KitFormPage'
+import { QuotesListPage } from '@/features/quotes/QuotesListPage'
+import { QuoteFormPage } from '@/features/quotes/QuoteFormPage'
+import { QuoteDetailPage } from '@/features/quotes/QuoteDetailPage'
+import { QuoteVersionFormPage } from '@/features/quotes/QuoteVersionFormPage'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -108,6 +112,30 @@ const kitEditRoute = createRoute({
   component: KitFormPage,
 })
 
+const quotesRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/quotes',
+  component: QuotesListPage,
+})
+
+const quoteCreateRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/quotes/new',
+  component: QuoteFormPage,
+})
+
+const quoteDetailRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/quotes/$id',
+  component: QuoteDetailPage,
+})
+
+const quoteAddVersionRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/quotes/$id/versions/new',
+  component: QuoteVersionFormPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authenticatedRoute.addChildren([
@@ -121,6 +149,10 @@ const routeTree = rootRoute.addChildren([
     kitsRoute,
     kitCreateRoute,
     kitEditRoute,
+    quotesRoute,
+    quoteCreateRoute,
+    quoteDetailRoute,
+    quoteAddVersionRoute,
   ]),
 ])
 
