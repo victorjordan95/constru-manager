@@ -96,7 +96,7 @@ export interface AddVersionPayload {
 }
 
 export interface UpdateStatusPayload {
-  status: 'PENDING_REVIEW' | 'REJECTED' | 'NO_RESPONSE'
+  status: Exclude<QuoteStatus, 'DRAFT' | 'ACCEPTED'>
 }
 
 export interface InstallmentPayload {

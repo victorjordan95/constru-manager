@@ -9,9 +9,9 @@ export const STATUS_LABEL: Record<QuoteStatus, string> = {
 }
 
 export const STATUS_COLOR: Record<QuoteStatus, { bg: string; text: string }> = {
-  DRAFT: { bg: 'var(--color-neutral-200)', text: 'var(--color-neutral-700)' },
-  PENDING_REVIEW: { bg: '#fff3cd', text: '#856404' },
+  DRAFT: { bg: 'var(--color-neutral-100)', text: 'var(--color-neutral-600)' },
+  PENDING_REVIEW: { bg: 'var(--color-warning-bg)', text: 'var(--color-warning)' },
   ACCEPTED: { bg: 'var(--color-success-bg)', text: 'var(--color-success)' },
   REJECTED: { bg: 'var(--color-danger-bg)', text: 'var(--color-danger)' },
-  NO_RESPONSE: { bg: '#e2e3e5', text: '#41464b' },
+  NO_RESPONSE: { bg: 'var(--color-neutral-300)', text: 'var(--color-neutral-600)' },
 }

@@ -18,11 +18,11 @@ export function useQuotes() {
   return useQuery({ queryKey: ['quotes'], queryFn: listQuotes })
 }
 
-export function useQuote(id: string) {
+export function useQuote(id: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['quotes', id],
     queryFn: () => getQuote(id),
-    enabled: Boolean(id),
+    enabled: (options?.enabled ?? true) && Boolean(id),
   })
 }
 
@@ -30,7 +30,7 @@ export function useCreateQuote() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (payload: CreateQuotePayload) => createQuote(payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['quotes'] }),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['quotes'] }) },
   })
 }
 
