@@ -35,7 +35,27 @@
       "Bash(npx ts-node:*)",
       "Bash(curl -s http://localhost:3000/health)",
       "Bash(kill %1)",
-      "Bash(node -r ts-node/register -e ':*)"
+      "Bash(node -r ts-node/register -e ':*)",
+      "Bash(npm test:*)",
+      "Bash(python3 -c \"import docx; doc = docx.Document\\('/c/freela/constru-manager/specs/SSD_v1.5_Final.docx'\\); [print\\(p.text\\) for p in doc.paragraphs if '17.5' in p.text or 'phase' in p.text.lower\\(\\) or 'fase' in p.text.lower\\(\\)]\")",
+      "Bash(unzip -p \"/c/freela/constru-manager/specs/SSD_v1.5_Final.docx\" \"word/document.xml\")",
+      "Bash(sed '/^[[:space:]]*$/d')",
+      "Read(//tmp/**)",
+      "Bash(xargs ls:*)",
+      "Bash(git init:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git:*)",
+      "Bash(ls /c/freela/constru-manager/client/.env*)",
+      "Bash(echo \"EXIT_CODE: $?\")",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(grep -rn \"rgba\\\\|#[0-9a-fA-F]\\\\{3,6\\\\}\\\\b\" C:/freela/constru-manager/client/src --include=\"*.tsx\" --include=\"*.ts\")",
+      "Bash(python3 -c ':*)",
+      "WebSearch",
+      "Bash(grep -n \"borderRadius\\\\|padding\\\\|hardcoded\\\\|#[0-9a-fA-F]\\\\{3,6\\\\}\\\\|rgb\\(\" /c/freela/constru-manager/client/src/features/quotes/QuoteFormPage.tsx /c/freela/constru-manager/client/src/features/quotes/QuoteDetailPage.tsx /c/freela/constru-manager/client/src/features/quotes/QuoteVersionFormPage.tsx)",
+      "Bash(grep -v \"//\")"
     ]
   }
 }
