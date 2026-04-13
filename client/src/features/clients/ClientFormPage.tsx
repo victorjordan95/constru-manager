@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useClient, useCreateClient, useUpdateClient } from './hooks'
 import type { CreateClientPayload } from './types'
+import { formatTaxId, detectTaxIdType } from '@/lib/taxId'
 
 type FormState = {
   name: string
@@ -149,11 +150,16 @@ export function ClientFormPage() {
           />
         </label>
         <label style={labelStyle}>
-          <span style={labelTextStyle}>CPF / CNPJ *</span>
+          <span style={labelTextStyle}>
+            {detectTaxIdType(form.taxId.replace(/\D/g, ''))} *
+          </span>
           <input
             style={inputStyle}
             value={form.taxId}
-            onChange={(e) => setForm({ ...form, taxId: e.target.value })}
+            onChange={(e) => {
+              const digits = e.target.value.replace(/\D/g, '')
+              setForm({ ...form, taxId: formatTaxId(digits) })
+            }}
             required
           />
         </label>
