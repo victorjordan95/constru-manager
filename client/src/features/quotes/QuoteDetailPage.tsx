@@ -1,14 +1,18 @@
+import { useState } from 'react'
 import { Link, useParams } from '@tanstack/react-router'
-import { useQuote } from './hooks'
+import { useQuote, useUpdateStatus } from './hooks'
 import { STATUS_LABEL, STATUS_COLOR } from './statusLabels'
 import { formatCurrency } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
 import type { QuoteVersion } from './types'
+import { AcceptQuoteModal } from './AcceptQuoteModal'
 
 export function QuoteDetailPage() {
   const params = useParams({ strict: false }) as { id: string }
   const { data: quote, isLoading, error } = useQuote(params.id)
   const { user } = useAuthStore()
+  const [showAcceptModal, setShowAcceptModal] = useState(false)
+  const updateStatusMutation = useUpdateStatus()
 
   if (isLoading) return <p style={{ color: 'var(--color-neutral-600)' }}>Carregando...</p>
   if (error || !quote) return <p style={{ color: 'var(--color-danger)' }}>Orçamento não encontrado.</p>
@@ -17,6 +21,9 @@ export function QuoteDetailPage() {
   const canAddVersion =
     quote.status !== 'ACCEPTED' &&
     (user?.role === 'ADMIN' || user?.role === 'SALES')
+  const isAdmin = user?.role === 'ADMIN'
+  const canChangeStatus = isAdmin && quote.status !== 'ACCEPTED'
+  const canAccept = isAdmin && quote.status !== 'ACCEPTED' && quote.activeVersion !== null
 
   return (
     <div style={{ maxWidth: 800 }}>
@@ -44,6 +51,98 @@ export function QuoteDetailPage() {
           >
             {STATUS_LABEL[quote.status] ?? quote.status}
           </span>
+          {canChangeStatus && (
+            <>
+              {quote.status !== 'PENDING_REVIEW' && (
+                <button
+                  disabled={updateStatusMutation.isPending}
+                  onClick={() =>
+                    updateStatusMutation.mutate({
+                      id: quote.id,
+                      payload: { status: 'PENDING_REVIEW' },
+                    })
+                  }
+                  style={{
+                    background: 'var(--color-warning-bg)',
+                    color: 'var(--color-warning)',
+                    border: 'none',
+                    padding: '6px var(--space-2)',
+                    borderRadius: 4,
+                    cursor: updateStatusMutation.isPending ? 'not-allowed' : 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  Em Análise
+                </button>
+              )}
+              {quote.status !== 'REJECTED' && (
+                <button
+                  disabled={updateStatusMutation.isPending}
+                  onClick={() => {
+                    if (confirm('Rejeitar este orçamento?')) {
+                      updateStatusMutation.mutate({
+                        id: quote.id,
+                        payload: { status: 'REJECTED' },
+                      })
+                    }
+                  }}
+                  style={{
+                    background: 'var(--color-danger-bg)',
+                    color: 'var(--color-danger)',
+                    border: 'none',
+                    padding: '6px var(--space-2)',
+                    borderRadius: 4,
+                    cursor: updateStatusMutation.isPending ? 'not-allowed' : 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  Rejeitar
+                </button>
+              )}
+              {quote.status !== 'NO_RESPONSE' && (
+                <button
+                  disabled={updateStatusMutation.isPending}
+                  onClick={() =>
+                    updateStatusMutation.mutate({
+                      id: quote.id,
+                      payload: { status: 'NO_RESPONSE' },
+                    })
+                  }
+                  style={{
+                    background: 'var(--color-neutral-100)',
+                    color: 'var(--color-neutral-600)',
+                    border: '1px solid var(--color-neutral-300)',
+                    padding: '6px var(--space-2)',
+                    borderRadius: 4,
+                    cursor: updateStatusMutation.isPending ? 'not-allowed' : 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  Sem Retorno
+                </button>
+              )}
+            </>
+          )}
+          {canAccept && (
+            <button
+              onClick={() => setShowAcceptModal(true)}
+              style={{
+                background: 'var(--color-success)',
+                color: 'var(--color-surface)',
+                border: 'none',
+                padding: '6px var(--space-2)',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+              }}
+            >
+              Aceitar
+            </button>
+          )}
           {canAddVersion && (
             <Link
               to="/quotes/$id/versions/new"
@@ -136,6 +235,9 @@ export function QuoteDetailPage() {
             </table>
           )}
         </div>
+      )}
+      {showAcceptModal && (
+        <AcceptQuoteModal quoteId={quote.id} onClose={() => setShowAcceptModal(false)} />
       )}
     </div>
   )
