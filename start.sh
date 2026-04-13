@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 SERVER="$ROOT/server"
@@ -45,36 +45,48 @@ if [ ! -d "$CLIENT/node_modules" ]; then
   ok "client/node_modules instalado"
 fi
 
-# ─── 3. Verificar conexão com o banco ────────────────────────────────────────
+# ─── 3. Gerar Prisma Client ──────────────────────────────────────────────────
+log "Gerando Prisma Client..."
+(cd "$SERVER" && npx prisma generate --schema src/prisma/schema.prisma 2>&1 | grep -v "^warn") \
+  && ok "Prisma Client gerado"
+
+# ─── 4. Verificar conexão com o banco ────────────────────────────────────────
 log "Verificando conexão com o banco de dados..."
 
+set +e
 DB_CHECK=$(cd "$SERVER" && node -e "
 const { PrismaClient } = require('@prisma/client');
 const p = new PrismaClient();
 p.\$connect()
-  .then(() => { console.log('ok'); p.\$disconnect(); })
-  .catch((e) => { console.error('fail: ' + e.message); process.exit(1); });
+  .then(() => { console.log('ok'); return p.\$disconnect(); })
+  .catch((e) => { process.stderr.write('fail: ' + e.message + '\n'); process.exit(1); });
 " 2>&1)
+DB_EXIT=$?
+set -e
 
-if echo "$DB_CHECK" | grep -q "^ok"; then
+if [ $DB_EXIT -eq 0 ] && echo "$DB_CHECK" | grep -q "^ok"; then
   ok "Banco acessível"
 else
   die "Não foi possível conectar ao banco.\n  Verifique se o PostgreSQL está rodando e as variáveis em server/.env\n  Erro: $DB_CHECK"
 fi
 
-# ─── 4. Migrations ───────────────────────────────────────────────────────────
+# ─── 5. Migrations ───────────────────────────────────────────────────────────
 log "Aplicando migrations..."
-(cd "$SERVER" && npx prisma migrate deploy --schema src/prisma/schema.prisma 2>&1 | grep -v "^warn") \
-  && ok "Migrations aplicadas"
+(cd "$SERVER" && npx prisma migrate deploy --schema src/prisma/schema.prisma 2>&1 | grep -v "^warn")
+ok "Migrations aplicadas"
 
-# ─── 5. Seed (apenas se não houver usuários) ─────────────────────────────────
+# ─── 6. Seed (apenas se não houver usuários) ─────────────────────────────────
 log "Verificando usuários no banco..."
 
+set +e
 USER_COUNT=$(cd "$SERVER" && node -e "
 const { PrismaClient } = require('@prisma/client');
 const p = new PrismaClient();
-p.user.count().then(n => { console.log(n); p.\$disconnect(); });
+p.user.count()
+  .then(n => { console.log(n); return p.\$disconnect(); })
+  .catch(() => { console.log('0'); process.exit(1); });
 " 2>&1)
+set -e
 
 if [ "$USER_COUNT" = "0" ]; then
   log "Nenhum usuário encontrado. Rodando seed..."
@@ -84,24 +96,28 @@ else
   ok "Banco já tem $USER_COUNT usuário(s) — seed ignorado"
 fi
 
-# ─── 6. Subir servidor (background) ──────────────────────────────────────────
+# ─── 7. Subir servidor (background) ──────────────────────────────────────────
 log "Iniciando server (porta 3000)..."
 (cd "$SERVER" && npm run dev > "$ROOT/server.log" 2>&1) &
 SERVER_PID=$!
 
-# Aguarda o servidor responder
+# Aguarda o servidor responder (até 20s)
+SERVER_READY=0
 for i in $(seq 1 20); do
   sleep 1
   if curl -s http://localhost:3000/health >/dev/null 2>&1; then
     ok "Server rodando (PID $SERVER_PID)"
+    SERVER_READY=1
     break
-  fi
-  if [ "$i" = "20" ]; then
-    warn "Server demorou para responder — verifique server.log"
   fi
 done
 
-# ─── 7. Subir cliente (background) ───────────────────────────────────────────
+if [ $SERVER_READY -eq 0 ]; then
+  warn "Server demorou para responder. Últimas linhas do log:"
+  tail -5 "$ROOT/server.log" 2>/dev/null || true
+fi
+
+# ─── 8. Subir cliente (background) ───────────────────────────────────────────
 log "Iniciando client (porta 5173)..."
 (cd "$CLIENT" && npm run dev > "$ROOT/client.log" 2>&1) &
 CLIENT_PID=$!
@@ -109,7 +125,7 @@ CLIENT_PID=$!
 sleep 3
 ok "Client rodando (PID $CLIENT_PID)"
 
-# ─── 8. Resumo ───────────────────────────────────────────────────────────────
+# ─── 9. Resumo ───────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}${GREEN}  Ambiente pronto!${RESET}"
 echo ""
@@ -124,9 +140,9 @@ echo -e "  Logs:"
 echo -e "    Server  →  server.log"
 echo -e "    Client  →  client.log"
 echo ""
-echo -e "  Para parar:  ${YELLOW}kill $SERVER_PID $CLIENT_PID${RESET}"
+echo -e "  Para parar: Ctrl+C"
 echo ""
 
-# Mantém o script vivo para capturar Ctrl+C
-trap "echo ''; log 'Encerrando...'; kill $SERVER_PID $CLIENT_PID 2>/dev/null; ok 'Ambiente encerrado.'" EXIT INT TERM
+# Mantém vivo e encerra processos filhos no Ctrl+C
+trap "echo ''; log 'Encerrando...'; kill $SERVER_PID $CLIENT_PID 2>/dev/null; ok 'Ambiente encerrado.'; exit 0" INT TERM
 wait
