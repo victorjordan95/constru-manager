@@ -12,7 +12,8 @@
     "prisma:migrate": "prisma migrate dev"
   },
   "prisma": {
-    "schema": "src/prisma/schema.prisma"
+    "schema": "src/prisma/schema.prisma",
+    "seed": "ts-node src/prisma/seed.ts"
   },
   "keywords": [],
   "author": "",
