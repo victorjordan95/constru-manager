@@ -1,31 +1,21 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useAcceptQuote } from './hooks'
 import { formatCurrency } from '@/lib/format'
+import { calculateInstallments } from '@/lib/installments'
 import type { InstallmentPayload } from './types'
-
-interface InstallmentRow {
-  _key: number
-  dueDate: string   // "YYYY-MM-DD" from <input type="date">
-  amountStr: string // decimal BRL string
-}
-
-const emptyInstRow = (key: number): InstallmentRow => ({
-  _key: key,
-  dueDate: '',
-  amountStr: '',
-})
 
 interface Props {
   quoteId: string
+  total: number   // integer cents — from activeVersion.total
   onClose: () => void
 }
 
-export function AcceptQuoteModal({ quoteId, onClose }: Props) {
+export function AcceptQuoteModal({ quoteId, total, onClose }: Props) {
   const acceptMutation = useAcceptQuote()
   const [paymentType, setPaymentType] = useState<'LUMP_SUM' | 'INSTALLMENTS'>('LUMP_SUM')
   const [downPaymentStr, setDownPaymentStr] = useState('0')
-  const [installmentRows, setInstallmentRows] = useState<InstallmentRow[]>([emptyInstRow(0)])
-  const [nextKey, setNextKey] = useState(1)
+  const [installmentCount, setInstallmentCount] = useState(1)
+  const [firstDate, setFirstDate] = useState('')
   const [serverError, setServerError] = useState<string | null>(null)
 
   const downPaymentCents = useMemo(() => {
@@ -33,29 +23,14 @@ export function AcceptQuoteModal({ quoteId, onClose }: Props) {
     return Math.round(isNaN(v) ? 0 : v * 100)
   }, [downPaymentStr])
 
-  const installmentTotal = useMemo(
-    () =>
-      installmentRows.reduce((sum, row) => {
-        const v = parseFloat(row.amountStr || '0')
-        return sum + Math.round(isNaN(v) ? 0 : v * 100)
-      }, 0),
-    [installmentRows],
-  )
+  const remaining = Math.max(0, total - downPaymentCents)
 
-  function addRow() {
-    setInstallmentRows((prev) => [...prev, emptyInstRow(nextKey)])
-    setNextKey((k) => k + 1)
-  }
+  const preview = useMemo(() => {
+    if (paymentType !== 'INSTALLMENTS' || !firstDate || installmentCount < 1) return []
+    return calculateInstallments(remaining, installmentCount, firstDate)
+  }, [paymentType, remaining, installmentCount, firstDate])
 
-  function removeRow(index: number) {
-    setInstallmentRows((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  function updateRow(index: number, patch: Partial<Omit<InstallmentRow, '_key'>>) {
-    setInstallmentRows((prev) =>
-      prev.map((row, i) => (i === index ? { ...row, ...patch } : row)),
-    )
-  }
+  const selectOnFocus = (e: React.FocusEvent<HTMLInputElement>) => e.target.select()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -63,19 +38,18 @@ export function AcceptQuoteModal({ quoteId, onClose }: Props) {
 
     let installments: InstallmentPayload[] | undefined
     if (paymentType === 'INSTALLMENTS') {
-      const rows = installmentRows
-        .map((row) => {
-          const amount = Math.round(parseFloat(row.amountStr || '0') * 100)
-          if (!row.dueDate || amount < 1) return null
-          return { dueDate: `${row.dueDate}T00:00:00.000Z`, amount }
-        })
-        .filter((x): x is InstallmentPayload => x !== null)
-
-      if (rows.length === 0) {
-        setServerError('Adicione pelo menos uma parcela.')
+      if (!firstDate) {
+        setServerError('Informe a data da primeira parcela.')
         return
       }
-      installments = rows
+      if (preview.length === 0) {
+        setServerError('Nenhuma parcela calculada. Verifique os valores.')
+        return
+      }
+      installments = preview.map((row) => ({
+        dueDate: `${row.dueDate}T00:00:00.000Z`,
+        amount: row.amount,
+      }))
     }
 
     try {
@@ -90,24 +64,11 @@ export function AcceptQuoteModal({ quoteId, onClose }: Props) {
       onClose()
     } catch (err: unknown) {
       const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code
-      if (code === 'QUOTE_NOT_FOUND') {
-        setServerError('Orçamento não encontrado.')
-      } else if (code === 'ALREADY_ACCEPTED') {
-        setServerError('Este orçamento já foi aceito.')
-      } else if (code === 'NO_ACTIVE_VERSION') {
-        setServerError('O orçamento não possui uma versão ativa.')
-      } else {
-        setServerError('Erro ao aceitar orçamento. Tente novamente.')
-      }
+      if (code === 'QUOTE_NOT_FOUND') setServerError('Orçamento não encontrado.')
+      else if (code === 'ALREADY_ACCEPTED') setServerError('Este orçamento já foi aceito.')
+      else if (code === 'NO_ACTIVE_VERSION') setServerError('O orçamento não possui uma versão ativa.')
+      else setServerError('Erro ao aceitar orçamento. Tente novamente.')
     }
-  }
-
-  const inputStyle: React.CSSProperties = {
-    padding: 'var(--space-1)',
-    borderRadius: 4,
-    border: '1px solid var(--color-neutral-300)',
-    fontSize: '1rem',
-    width: '100%',
   }
 
   const isPending = acceptMutation.isPending
@@ -120,8 +81,15 @@ export function AcceptQuoteModal({ quoteId, onClose }: Props) {
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose, isPending])
 
+  const inputStyle: React.CSSProperties = {
+    padding: 'var(--space-1)',
+    borderRadius: 4,
+    border: '1px solid var(--color-neutral-300)',
+    fontSize: '1rem',
+    width: '100%',
+  }
+
   return (
-    // Backdrop
     <div
       style={{
         position: 'fixed',
@@ -149,6 +117,21 @@ export function AcceptQuoteModal({ quoteId, onClose }: Props) {
         }}
       >
         <h2 style={{ fontSize: '1.25rem', marginBottom: 'var(--space-2)' }}>Aceitar Orçamento</h2>
+
+        {/* Order summary */}
+        <div
+          style={{
+            background: 'var(--color-primary-bg)',
+            borderRadius: 6,
+            padding: 'var(--space-1) var(--space-2)',
+            marginBottom: 'var(--space-2)',
+            fontSize: '0.9rem',
+          }}
+        >
+          Valor do pedido:{' '}
+          <strong style={{ color: 'var(--color-primary)' }}>{formatCurrency(total)}</strong>
+        </div>
+
         {serverError && (
           <p
             style={{
@@ -162,6 +145,7 @@ export function AcceptQuoteModal({ quoteId, onClose }: Props) {
             {serverError}
           </p>
         )}
+
         <form
           onSubmit={handleSubmit}
           style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}
@@ -193,83 +177,76 @@ export function AcceptQuoteModal({ quoteId, onClose }: Props) {
               step="0.01"
               value={downPaymentStr}
               onChange={(e) => setDownPaymentStr(e.target.value)}
+              onFocus={selectOnFocus}
               style={inputStyle}
             />
           </label>
 
-          {/* Installments (only when INSTALLMENTS selected) */}
+          {/* Installments section */}
           {paymentType === 'INSTALLMENTS' && (
-            <div>
-              <p
-                style={{
-                  fontSize: '0.875rem',
-                  color: 'var(--color-neutral-600)',
-                  fontWeight: 500,
-                  marginBottom: 8,
-                }}
-              >
-                Parcelas
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {installmentRows.map((row, index) => (
-                  <div key={row._key} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input
-                      type="date"
-                      value={row.dueDate}
-                      onChange={(e) => updateRow(index, { dueDate: e.target.value })}
-                      required
-                      style={{ ...inputStyle, flex: 1 }}
-                    />
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      placeholder="Valor (R$)"
-                      value={row.amountStr}
-                      onChange={(e) => updateRow(index, { amountStr: e.target.value })}
-                      required
-                      style={{ ...inputStyle, width: 130, flexShrink: 0 }}
-                    />
-                    {installmentRows.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeRow(index)}
-                        style={{
-                          background: 'var(--color-danger-bg)',
-                          color: 'var(--color-danger)',
-                          border: 'none',
-                          borderRadius: 4,
-                          padding: '4px 8px',
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                        }}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-1)' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontSize: '0.875rem', color: 'var(--color-neutral-600)', fontWeight: 500 }}>
+                    Nº de parcelas
+                  </span>
+                  <select
+                    value={installmentCount}
+                    onChange={(e) => setInstallmentCount(Number(e.target.value))}
+                    style={inputStyle}
+                  >
+                    {Array.from({ length: 36 }, (_, i) => i + 1).map((n) => (
+                      <option key={n} value={n}>{n}x</option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontSize: '0.875rem', color: 'var(--color-neutral-600)', fontWeight: 500 }}>
+                    Data da 1ª parcela
+                  </span>
+                  <input
+                    type="date"
+                    value={firstDate}
+                    onChange={(e) => setFirstDate(e.target.value)}
+                    required={paymentType === 'INSTALLMENTS'}
+                    style={inputStyle}
+                  />
+                </label>
               </div>
-              <button
-                type="button"
-                onClick={addRow}
-                style={{
-                  marginTop: 8,
-                  background: 'none',
-                  border: '1px dashed var(--color-neutral-300)',
-                  padding: '6px var(--space-2)',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  color: 'var(--color-primary)',
-                  fontSize: '0.875rem',
-                  width: '100%',
-                }}
-              >
-                + Adicionar parcela
-              </button>
-              <p style={{ fontSize: '0.8rem', color: 'var(--color-neutral-600)', marginTop: 4 }}>
-                Total das parcelas: {formatCurrency(installmentTotal)}
+
+              <p style={{ fontSize: '0.8rem', color: 'var(--color-neutral-600)' }}>
+                Saldo a parcelar: <strong>{formatCurrency(remaining)}</strong>
               </p>
+
+              {preview.length > 0 && (
+                <div>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: 6, color: 'var(--color-neutral-600)' }}>
+                    Previsão de parcelas
+                  </p>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--color-neutral-100)' }}>
+                        <th style={{ textAlign: 'left', padding: '4px 8px', color: 'var(--color-neutral-600)' }}>#</th>
+                        <th style={{ textAlign: 'left', padding: '4px 8px', color: 'var(--color-neutral-600)' }}>Vencimento</th>
+                        <th style={{ textAlign: 'right', padding: '4px 8px', color: 'var(--color-neutral-600)' }}>Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {preview.map((row) => (
+                        <tr key={row.index} style={{ borderTop: '1px solid var(--color-neutral-200)' }}>
+                          <td style={{ padding: '4px 8px', color: 'var(--color-neutral-600)' }}>{row.index}</td>
+                          <td style={{ padding: '4px 8px' }}>
+                            {new Date(`${row.dueDate}T12:00:00`).toLocaleDateString('pt-BR')}
+                          </td>
+                          <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 600 }}>
+                            {formatCurrency(row.amount)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
