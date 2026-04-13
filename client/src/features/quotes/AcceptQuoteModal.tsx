@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useAcceptQuote } from './hooks'
 import { formatCurrency } from '@/lib/format'
 import type { InstallmentPayload } from './types'
@@ -28,7 +28,10 @@ export function AcceptQuoteModal({ quoteId, onClose }: Props) {
   const [nextKey, setNextKey] = useState(1)
   const [serverError, setServerError] = useState<string | null>(null)
 
-  const downPaymentCents = Math.round(parseFloat(downPaymentStr || '0') * 100)
+  const downPaymentCents = useMemo(() => {
+    const v = parseFloat(downPaymentStr || '0')
+    return Math.round(isNaN(v) ? 0 : v * 100)
+  }, [downPaymentStr])
 
   const installmentTotal = useMemo(
     () =>
@@ -109,6 +112,14 @@ export function AcceptQuoteModal({ quoteId, onClose }: Props) {
 
   const isPending = acceptMutation.isPending
 
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !isPending) onClose()
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onClose, isPending])
+
   return (
     // Backdrop
     <div
@@ -122,7 +133,7 @@ export function AcceptQuoteModal({ quoteId, onClose }: Props) {
         zIndex: 100,
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget && !isPending) onClose()
       }}
     >
       <div
@@ -161,6 +172,7 @@ export function AcceptQuoteModal({ quoteId, onClose }: Props) {
               Forma de pagamento
             </span>
             <select
+              autoFocus
               value={paymentType}
               onChange={(e) => setPaymentType(e.target.value as 'LUMP_SUM' | 'INSTALLMENTS')}
               style={inputStyle}
@@ -281,12 +293,14 @@ export function AcceptQuoteModal({ quoteId, onClose }: Props) {
             <button
               type="button"
               onClick={onClose}
+              disabled={isPending}
               style={{
                 background: 'none',
                 border: '1px solid var(--color-neutral-300)',
                 padding: 'var(--space-1) var(--space-2)',
                 borderRadius: 4,
-                cursor: 'pointer',
+                cursor: isPending ? 'not-allowed' : 'pointer',
+                opacity: isPending ? 0.7 : 1,
               }}
             >
               Cancelar

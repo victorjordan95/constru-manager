@@ -22,8 +22,8 @@ export function QuoteDetailPage() {
     quote.status !== 'ACCEPTED' &&
     (user?.role === 'ADMIN' || user?.role === 'SALES')
   const isAdmin = user?.role === 'ADMIN'
-  const canChangeStatus = isAdmin && quote.status !== 'ACCEPTED'
-  const canAccept = isAdmin && quote.status !== 'ACCEPTED' && quote.activeVersion !== null
+  const canChangeStatus = isAdmin && quote.status !== 'ACCEPTED' && quote.status !== 'DRAFT'
+  const canAccept = isAdmin && quote.status !== 'ACCEPTED' && quote.status !== 'DRAFT' && quote.activeVersion !== null
 
   return (
     <div style={{ maxWidth: 800 }}>
@@ -129,15 +129,17 @@ export function QuoteDetailPage() {
           {canAccept && (
             <button
               onClick={() => setShowAcceptModal(true)}
+              disabled={updateStatusMutation.isPending}
               style={{
                 background: 'var(--color-success)',
                 color: 'var(--color-surface)',
                 border: 'none',
                 padding: '6px var(--space-2)',
                 borderRadius: 4,
-                cursor: 'pointer',
+                cursor: updateStatusMutation.isPending ? 'not-allowed' : 'pointer',
                 fontSize: '0.875rem',
                 fontWeight: 600,
+                opacity: updateStatusMutation.isPending ? 0.7 : 1,
               }}
             >
               Aceitar
