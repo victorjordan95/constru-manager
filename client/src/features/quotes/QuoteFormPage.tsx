@@ -111,8 +111,15 @@ export function QuoteFormPage() {
         discount: discountCents,
       })
       void navigate({ to: '/quotes/$id', params: { id: quote.id } })
-    } catch {
-      setServerError('Erro ao criar orçamento. Tente novamente.')
+    } catch (err: unknown) {
+      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code
+      if (code === 'CLIENT_NOT_FOUND') {
+        setServerError('Cliente não encontrado ou inativo.')
+      } else if (code === 'INVALID_PRODUCT' || code === 'INVALID_KIT') {
+        setServerError('Um ou mais itens não encontrados ou inativos.')
+      } else {
+        setServerError('Erro ao criar orçamento. Tente novamente.')
+      }
     }
   }
 

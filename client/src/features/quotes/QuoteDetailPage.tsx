@@ -45,21 +45,20 @@ export function QuoteDetailPage() {
             {STATUS_LABEL[quote.status] ?? quote.status}
           </span>
           {canAddVersion && (
-            <Link to="/quotes/$id/versions/new" params={{ id: quote.id }}>
-              <button
-                style={{
-                  background: 'var(--color-primary)',
-                  color: 'var(--color-surface)',
-                  border: 'none',
-                  padding: '6px var(--space-2)',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                }}
-              >
-                + Nova Versão
-              </button>
+            <Link
+              to="/quotes/$id/versions/new"
+              params={{ id: quote.id }}
+              style={{
+                background: 'var(--color-primary)',
+                color: 'var(--color-surface)',
+                textDecoration: 'none',
+                padding: '6px var(--space-2)',
+                borderRadius: 4,
+                fontSize: '0.875rem',
+                fontWeight: 600,
+              }}
+            >
+              + Nova Versão
             </Link>
           )}
         </div>

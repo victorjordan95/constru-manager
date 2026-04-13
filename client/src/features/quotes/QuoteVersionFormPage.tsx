@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate, useParams } from '@tanstack/react-router'
+import { Link, useNavigate, useParams } from '@tanstack/react-router'
 import { useQuote, useAddVersion } from './hooks'
 import { useProducts } from '@/features/products/hooks'
 import { useKits } from '@/features/kits/hooks'
@@ -27,7 +27,7 @@ const emptyRow = (key: number): ItemRow => ({
 export function QuoteVersionFormPage() {
   const navigate = useNavigate()
   const params = useParams({ strict: false }) as { id: string }
-  const { data: quote } = useQuote(params.id)
+  const { data: quote, isLoading: quoteLoading, error: quoteError } = useQuote(params.id)
   const { data: products } = useProducts()
   const { data: kits } = useKits()
   const addVersionMutation = useAddVersion()
@@ -121,8 +121,13 @@ export function QuoteVersionFormPage() {
         payload: { items: validItems, laborCost: laborCostCents, discount: discountCents },
       })
       void navigate({ to: '/quotes/$id', params: { id: params.id } })
-    } catch {
-      setServerError('Erro ao adicionar versão. Tente novamente.')
+    } catch (err: unknown) {
+      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code
+      if (code === 'INVALID_PRODUCT' || code === 'INVALID_KIT') {
+        setServerError('Um ou mais itens não encontrados ou inativos.')
+      } else {
+        setServerError('Erro ao adicionar versão. Tente novamente.')
+      }
     }
   }
 
@@ -143,16 +148,19 @@ export function QuoteVersionFormPage() {
   const isPending = addVersionMutation.isPending
   const nextVersionNumber = (quote?.versions.length ?? 0) + 1
 
+  if (quoteLoading) return <p style={{ color: 'var(--color-neutral-600)' }}>Carregando...</p>
+  if (quoteError || !quote) return <p style={{ color: 'var(--color-danger)' }}>Orçamento não encontrado.</p>
+
   return (
     <div style={{ maxWidth: 720 }}>
       <div style={{ marginBottom: 'var(--space-3)' }}>
-        <button
-          type="button"
-          onClick={() => void navigate({ to: '/quotes/$id', params: { id: params.id } })}
-          style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '0.875rem', cursor: 'pointer', padding: 0 }}
+        <Link
+          to="/quotes/$id"
+          params={{ id: params.id }}
+          style={{ color: 'var(--color-primary)', fontSize: '0.875rem', textDecoration: 'none' }}
         >
           ← Voltar ao Orçamento
-        </button>
+        </Link>
         <h1 style={{ fontSize: '1.5rem', marginTop: 4 }}>
           Nova Versão (v{nextVersionNumber})
         </h1>
