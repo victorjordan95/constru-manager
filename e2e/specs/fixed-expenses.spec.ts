@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures/index';
 
 test.describe('Despesas Fixas', () => {
   test('cria, edita e desativa uma despesa fixa', async ({ financePage: page }) => {
+    page.on('dialog', (dialog) => dialog.accept());
     // ── CREATE ──────────────────────────────────────────────────────────────
     await page.goto('/fixed-expenses');
     await page.getByRole('button', { name: '+ Nova Despesa' }).click();
@@ -30,7 +31,6 @@ test.describe('Despesas Fixas', () => {
     await expect(expenseRow.getByText(/R\$\s*200,00/)).toBeVisible();
 
     // ── DEACTIVATE ───────────────────────────────────────────────────────────
-    page.on('dialog', (dialog) => dialog.accept());
     await expenseRow.getByRole('button', { name: 'Desativar' }).click();
     await expect(page.getByText('E2E Conta Luz Teste')).not.toBeVisible();
   });

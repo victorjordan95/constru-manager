@@ -23,10 +23,10 @@ test.describe('Financeiro', () => {
 
     // The installment from acceptedQuote (dueDate = today) should appear in table
     // "E2E Quote Client" is the clientName set in the fixture
-    await expect(page.getByText('E2E Quote Client')).toBeVisible();
+    await expect(page.getByText(acceptedQuote.clientName)).toBeVisible();
 
     // Mark the installment as paid
-    const row = page.getByText('E2E Quote Client').locator('../..');
+    const row = page.locator('tr', { hasText: acceptedQuote.clientName });
     await row.getByRole('button', { name: 'Marcar como pago' }).click();
 
     // After invalidation + refetch, status changes to "Pago"
@@ -43,7 +43,7 @@ test.describe('Financeiro', () => {
     // in the current month — so it appears in the expenseLogs table
     await expect(page.getByText(createdExpense.name)).toBeVisible();
 
-    const row = page.getByText(createdExpense.name).locator('../..');
+    const row = page.locator('tr', { hasText: createdExpense.name });
     await row.getByRole('button', { name: 'Marcar como pago' }).click();
 
     await expect(row.getByText('Pago')).toBeVisible({ timeout: 8000 });

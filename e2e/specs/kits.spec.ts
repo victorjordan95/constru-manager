@@ -28,11 +28,12 @@ test.describe('Kits', () => {
     await expect(page.getByText('E2E Kit Teste')).toBeVisible();
 
     // ── EDIT ─────────────────────────────────────────────────────────────────
-    // The kit card is the closest ancestor div containing the heading and the Editar link
-    const kitCard = page
-      .getByRole('heading', { name: 'E2E Kit Teste', exact: true })
-      .locator('xpath=ancestor::div[.//a[.//button[normalize-space()="Editar"]]][1]');
-    await kitCard.getByRole('button', { name: 'Editar' }).click();
+    // Scope to the heading element's parent card and click its Editar button
+    await page.getByRole('heading', { name: 'E2E Kit Teste', exact: true })
+      .locator('..')
+      .locator('..')
+      .getByRole('button', { name: 'Editar' })
+      .click();
     await page.waitForURL(/\/kits\/[^/]+\/edit/);
     await expect(page.getByLabel('Nome do Kit *')).toHaveValue('E2E Kit Teste');
 

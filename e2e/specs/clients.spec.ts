@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures/index';
 
 test.describe('Clientes', () => {
   test('cria, edita e exclui um cliente', async ({ adminPage: page }) => {
+    page.on('dialog', (dialog) => dialog.accept());
     // ── CREATE ──────────────────────────────────────────────────────────────
     await page.goto('/clients');
     await page.getByRole('button', { name: '+ Novo Cliente' }).click();
@@ -27,7 +28,6 @@ test.describe('Clientes', () => {
     await expect(page.getByText('E2E Cliente Editado')).toBeVisible();
 
     // ── DELETE ───────────────────────────────────────────────────────────────
-    page.on('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Excluir' }).first().click();
     // After deletion + query invalidation the row disappears
     await expect(page.getByText('E2E Cliente Editado')).not.toBeVisible();

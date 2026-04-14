@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures/index';
 
 test.describe('Produtos', () => {
   test('cria, edita e exclui um produto', async ({ adminPage: page }) => {
+    page.on('dialog', (dialog) => dialog.accept());
     // ── CREATE ──────────────────────────────────────────────────────────────
     await page.goto('/products');
     await page.getByRole('button', { name: '+ Novo Produto' }).click();
@@ -32,7 +33,6 @@ test.describe('Produtos', () => {
     await expect(page.getByText('E2E Produto Teste')).toBeVisible();
 
     // ── DELETE ───────────────────────────────────────────────────────────────
-    page.on('dialog', (dialog) => dialog.accept());
     await productRow.getByRole('button', { name: 'Excluir' }).click();
     await expect(page.getByText('E2E Produto Teste')).not.toBeVisible();
   });

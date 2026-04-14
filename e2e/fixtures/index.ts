@@ -41,7 +41,7 @@ type Fixtures = {
   createdClient: { id: string; name: string };
   createdProduct: { id: string; name: string; finalPrice: number };
   createdKit: { id: string; name: string };
-  acceptedQuote: { quoteId: string; installmentId: string };
+  acceptedQuote: { quoteId: string; installmentId: string; clientName: string };
   createdExpense: { id: string; name: string };
 };
 
@@ -118,9 +118,10 @@ export const test = base.extend<Fixtures>({
 
   acceptedQuote: async ({}, use) => {
     // Create client
+    const suffix = Date.now();
     const clientRes = await apiFetch('/clients', {
       method: 'POST',
-      body: JSON.stringify({ name: 'E2E Quote Client', taxId: `QC${Date.now()}` }),
+      body: JSON.stringify({ name: `E2E Quote Client ${suffix}`, taxId: `QC${suffix}` }),
     });
     const client = (await clientRes.json()) as { id: string };
 
@@ -163,13 +164,13 @@ export const test = base.extend<Fixtures>({
     };
     const installmentId = detail.sale.installments[0].id;
 
-    await use({ quoteId: quote.id, installmentId });
+    await use({ quoteId: quote.id, installmentId, clientName: `E2E Quote Client ${suffix}` });
   },
 
   createdExpense: async ({}, use) => {
     const res = await apiFetch('/fixed-expenses', {
       method: 'POST',
-      body: JSON.stringify({ name: 'E2E Conta Luz Fixture', amount: 15000, dueDay: 10 }),
+      body: JSON.stringify({ name: `E2E Conta Luz ${Date.now()}`, amount: 15000, dueDay: 10 }),
     });
     const data = (await res.json()) as { id: string; name: string };
     await use({ id: data.id, name: data.name });
