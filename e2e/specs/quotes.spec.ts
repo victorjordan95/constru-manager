@@ -15,7 +15,11 @@ test.describe('Orçamentos', () => {
     await page.goto('/quotes/new');
 
     // Select client — the <select> is inside <label><span>Cliente *</span><select /></label>
-    await page.getByLabel('Cliente *').selectOption({ label: createdClient.name });
+    // Wait for clients to load first
+    await expect(
+      page.getByLabel('Cliente *').locator(`option[value="${createdClient.id}"]`),
+    ).toHaveCount(1);
+    await page.getByLabel('Cliente *').selectOption(createdClient.id);
 
     // First item row has: [type select][product select][quantity input]
     // page.locator('select') at indices: 0=Cliente, 1=type (Produto/Kit), 2=product
@@ -23,7 +27,11 @@ test.describe('Orçamentos', () => {
     await itemTypeSelect.selectOption('product');
 
     const itemProductSelect = page.locator('select').nth(2);
-    await itemProductSelect.selectOption({ label: createdProduct.name });
+    // Wait for products to load
+    await expect(
+      itemProductSelect.locator(`option[value="${createdProduct.id}"]`),
+    ).toHaveCount(1);
+    await itemProductSelect.selectOption(createdProduct.id);
 
     // Verify total preview updates
     await expect(page.getByText(/Total:/)).toBeVisible();

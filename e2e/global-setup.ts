@@ -10,8 +10,11 @@ const testEnv = {
   ...process.env,
   DATABASE_URL: 'postgresql://postgres:postgres@localhost:5433/constru_manager_test',
   PORT: '3001',
-  JWT_SECRET: 'e2e-test-secret',
-  JWT_REFRESH_SECRET: 'e2e-test-refresh-secret',
+  JWT_ACCESS_SECRET: 'e2e-test-access-secret-padding-padding-padding',
+  JWT_REFRESH_SECRET: 'e2e-test-refresh-secret-padding-padding-padding',
+  JWT_ACCESS_EXPIRES_IN: '15m',
+  JWT_REFRESH_EXPIRES_IN: '7d',
+  CORS_ORIGIN: 'http://localhost:5173',
   NODE_ENV: 'test',
 };
 
@@ -78,21 +81,29 @@ export default async function globalSetup() {
 
   // 5. Start Express server on port 3001
   console.log('[e2e] Starting test server...');
+  const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
   const serverProcess: ChildProcess = spawn(
-    'npx',
+    npxCmd,
     ['ts-node', '-r', 'dotenv/config', 'src/server.ts'],
     {
       cwd: serverDir,
       env: testEnv,
       stdio: 'pipe',
       detached: false,
+      shell: process.platform === 'win32',
     },
   );
 
   fs.writeFileSync(path.join(__dirname, '.server-pid'), String(serverProcess.pid!));
 
   serverProcess.stderr?.on('data', (d: Buffer) => {
-    if (process.env.E2E_DEBUG) process.stderr.write(d);
+    if (process.env.E2E_DEBUG) process.stderr.write('[server stderr] ' + d.toString());
+  });
+  serverProcess.stdout?.on('data', (d: Buffer) => {
+    if (process.env.E2E_DEBUG) process.stdout.write('[server stdout] ' + d.toString());
+  });
+  serverProcess.on('exit', (code, signal) => {
+    if (process.env.E2E_DEBUG) console.log(`[server] exited code=${code} signal=${signal}`);
   });
 
   // 6. Wait for server to accept connections

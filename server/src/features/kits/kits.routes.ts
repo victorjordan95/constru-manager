@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import { authenticate } from '../../middlewares/authenticate';
 import { authorize } from '../../middlewares/authorize';
-import { handleListKits, handleGetKit, handleCreateKit, handleUpdateKit } from './kits.controller';
+import {
+  handleListKits,
+  handleGetKit,
+  handleCreateKit,
+  handleUpdateKit,
+} from './kits.controller';
 
 export const kitsRouter = Router();
 
@@ -9,5 +14,6 @@ export const kitsRouter = Router();
 kitsRouter.use(authenticate, authorize('ADMIN'));
 
 kitsRouter.get('/', handleListKits);
+kitsRouter.get('/:id', handleGetKit);
 kitsRouter.post('/', handleCreateKit);
 kitsRouter.put('/:id', handleUpdateKit);

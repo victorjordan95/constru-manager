@@ -9,9 +9,13 @@ test.describe('Kits', () => {
 
     await page.getByLabel('Nome do Kit *').fill('E2E Kit Teste');
 
+    // Wait for products to load into the select
+    await expect(
+      page.getByRole('combobox').first().locator(`option[value="${createdProduct.id}"]`),
+    ).toHaveCount(1);
+
     // The first <select> on the form is the product selector for the first item row
-    // (it has a default "Selecione um produto" option)
-    await page.getByRole('combobox').first().selectOption({ label: createdProduct.name });
+    await page.getByRole('combobox').first().selectOption(createdProduct.id);
 
     // Quantity input — default is 1, change to 2
     await page.getByRole('spinbutton').first().fill('2');
@@ -24,7 +28,12 @@ test.describe('Kits', () => {
     await expect(page.getByText('E2E Kit Teste')).toBeVisible();
 
     // ── EDIT ─────────────────────────────────────────────────────────────────
-    await page.getByRole('button', { name: 'Editar' }).first().click();
+    // The kit card is the closest ancestor div containing the heading and the Editar link
+    const kitCard = page
+      .getByRole('heading', { name: 'E2E Kit Teste', exact: true })
+      .locator('xpath=ancestor::div[.//a[.//button[normalize-space()="Editar"]]][1]');
+    await kitCard.getByRole('button', { name: 'Editar' }).click();
+    await page.waitForURL(/\/kits\/[^/]+\/edit/);
     await expect(page.getByLabel('Nome do Kit *')).toHaveValue('E2E Kit Teste');
 
     await page.getByLabel('Nome do Kit *').clear();

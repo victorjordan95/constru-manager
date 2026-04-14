@@ -11,7 +11,8 @@ test.describe('Financeiro', () => {
 
     // After save, the balance card reflects the new opening balance
     // openingBalance = 100000 cents → "Saldo inicial: R$ 1.000,00"
-    await expect(page.getByText(/Saldo inicial: R\$ 1\.000,00/)).toBeVisible();
+    // Note: Intl.NumberFormat uses non-breaking space between R$ and number
+    await expect(page.getByText(/Saldo inicial:\s*R\$\s*1\.000,00/)).toBeVisible();
   });
 
   test('exibe parcela do mês e marca como paga', async ({

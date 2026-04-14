@@ -20,7 +20,8 @@ test.describe('Produtos', () => {
     await expect(page.getByText('E2E Produto Teste')).toBeVisible();
 
     // ── EDIT ─────────────────────────────────────────────────────────────────
-    await page.getByRole('button', { name: 'Editar' }).first().click();
+    const productRow = page.locator('tr', { hasText: 'E2E Produto Teste' });
+    await productRow.getByRole('button', { name: 'Editar' }).click();
     await expect(page.getByLabel('Nome *')).toHaveValue('E2E Produto Teste');
 
     await page.getByLabel('Custo (R$) *').clear();
@@ -32,7 +33,7 @@ test.describe('Produtos', () => {
 
     // ── DELETE ───────────────────────────────────────────────────────────────
     page.on('dialog', (dialog) => dialog.accept());
-    await page.getByRole('button', { name: 'Excluir' }).first().click();
+    await productRow.getByRole('button', { name: 'Excluir' }).click();
     await expect(page.getByText('E2E Produto Teste')).not.toBeVisible();
   });
 });

@@ -17,7 +17,8 @@ test.describe('Despesas Fixas', () => {
     await expect(page.getByText('E2E Conta Luz Teste')).toBeVisible();
 
     // ── EDIT ─────────────────────────────────────────────────────────────────
-    await page.getByRole('button', { name: 'Editar' }).first().click();
+    const expenseRow = page.locator('tr', { hasText: 'E2E Conta Luz Teste' });
+    await expenseRow.getByRole('button', { name: 'Editar' }).click();
     await expect(page.getByLabel('Nome *')).toHaveValue('E2E Conta Luz Teste');
 
     await page.getByLabel('Valor (R$) *').clear();
@@ -25,12 +26,12 @@ test.describe('Despesas Fixas', () => {
     await page.getByRole('button', { name: 'Salvar' }).click();
 
     await expect(page).toHaveURL('/fixed-expenses');
-    // R$ 200.00 = 20000 cents; formatCurrency(20000) → "R$ 200,00"
-    await expect(page.getByText('R$ 200,00')).toBeVisible();
+    // R$ 200.00 = 20000 cents; formatCurrency(20000) → "R$ 200,00" (with NBSP)
+    await expect(expenseRow.getByText(/R\$\s*200,00/)).toBeVisible();
 
     // ── DEACTIVATE ───────────────────────────────────────────────────────────
     page.on('dialog', (dialog) => dialog.accept());
-    await page.getByRole('button', { name: 'Desativar' }).first().click();
+    await expenseRow.getByRole('button', { name: 'Desativar' }).click();
     await expect(page.getByText('E2E Conta Luz Teste')).not.toBeVisible();
   });
 });
