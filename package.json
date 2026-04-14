@@ -1,0 +1,11 @@
+{
+  "name": "constru-manager",
+  "private": true,
+  "scripts": {
+    "e2e": "playwright test --config e2e/playwright.config.ts",
+    "e2e:ui": "playwright test --config e2e/playwright.config.ts --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
