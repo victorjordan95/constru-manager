@@ -13,6 +13,10 @@ export function listProducts() {
   });
 }
 
+export function getProduct(id: string) {
+  return prisma.product.findFirst({ where: { id, isActive: true } });
+}
+
 export function createProduct(data: CreateProductInput) {
   const finalPrice = computeFinalPrice(data.basePrice, data.markupPercent);
   return prisma.product.create({

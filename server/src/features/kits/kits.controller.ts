@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { listKits, createKit, updateKit } from './kits.service';
+import { listKits, getKit, createKit, updateKit } from './kits.service';
 import { createKitSchema, updateKitSchema } from './kits.types';
 
 export async function handleListKits(
@@ -9,6 +9,23 @@ export async function handleListKits(
 ): Promise<void> {
   try {
     res.json(await listKits());
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleGetKit(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const kit = await getKit(req.params.id as string);
+    if (!kit) {
+      res.status(404).json({ error: 'Kit not found', code: 'NOT_FOUND' });
+      return;
+    }
+    res.json(kit);
   } catch (err) {
     next(err);
   }

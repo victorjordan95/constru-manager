@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { listProducts, createProduct, updateProduct, softDeleteProduct } from './products.service';
+import { listProducts, getProduct, createProduct, updateProduct, softDeleteProduct } from './products.service';
 import { createProductSchema, updateProductSchema } from './products.types';
 
 export async function handleListProducts(
@@ -9,6 +9,23 @@ export async function handleListProducts(
 ): Promise<void> {
   try {
     res.json(await listProducts());
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleGetProduct(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const product = await getProduct(req.params.id as string);
+    if (!product) {
+      res.status(404).json({ error: 'Product not found', code: 'NOT_FOUND' });
+      return;
+    }
+    res.json(product);
   } catch (err) {
     next(err);
   }

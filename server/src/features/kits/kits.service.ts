@@ -33,6 +33,10 @@ export function listKits() {
   });
 }
 
+export function getKit(id: string) {
+  return prisma.kit.findFirst({ where: { id, isActive: true }, include: kitInclude });
+}
+
 export async function createKit(data: CreateKitInput) {
   const productIds = data.items.map(i => i.productId);
   const priceMap = await buildPriceMap(productIds);

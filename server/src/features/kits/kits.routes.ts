@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../../middlewares/authenticate';
 import { authorize } from '../../middlewares/authorize';
-import { handleListKits, handleCreateKit, handleUpdateKit } from './kits.controller';
+import { handleListKits, handleGetKit, handleCreateKit, handleUpdateKit } from './kits.controller';
 
 export const kitsRouter = Router();
 
