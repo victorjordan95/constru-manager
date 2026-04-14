@@ -11,7 +11,7 @@ const MONTH_NAMES = [
 const STATUS_COLOR: Record<string, string> = {
   PENDING: 'var(--color-warning, #f59e0b)',
   PAID: 'var(--color-success, #16a34a)',
-  OVERDUE: 'var(--color-danger)',
+  OVERDUE: 'var(--color-danger, #dc2626)',
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -26,6 +26,8 @@ export function FinanceDashboardPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [editingBalance, setEditingBalance] = useState(false);
   const [balanceInput, setBalanceInput] = useState('');
+  const [payingInstallmentId, setPayingInstallmentId] = useState<string | null>(null);
+  const [payingExpenseLogId, setPayingExpenseLogId] = useState<string | null>(null);
 
   const { data, isLoading, error } = useFinanceSummary(month, year);
   const updateBalanceMutation = useUpdateOpeningBalance();
@@ -43,10 +45,33 @@ export function FinanceDashboardPage() {
   }
 
   async function handleSaveBalance() {
+    // balanceInput is in BRL (e.g. "5000.00"); server stores cents so multiply by 100
     const value = Math.round(parseFloat(balanceInput) * 100);
     if (isNaN(value) || value < 0) return;
-    await updateBalanceMutation.mutateAsync(value);
-    setEditingBalance(false);
+    try {
+      await updateBalanceMutation.mutateAsync(value);
+      setEditingBalance(false);
+    } catch {
+      // mutation error is surfaced via updateBalanceMutation.error if needed
+    }
+  }
+
+  async function handlePayInstallment(id: string) {
+    setPayingInstallmentId(id);
+    try {
+      await payInstallmentMutation.mutateAsync(id);
+    } finally {
+      setPayingInstallmentId(null);
+    }
+  }
+
+  async function handlePayExpenseLog(id: string) {
+    setPayingExpenseLogId(id);
+    try {
+      await payExpenseLogMutation.mutateAsync(id);
+    } finally {
+      setPayingExpenseLogId(null);
+    }
   }
 
   if (isLoading) return <p style={{ color: 'var(--color-neutral-600)' }}>Carregando...</p>;
@@ -222,9 +247,14 @@ export function FinanceDashboardPage() {
                 <td style={{ padding: '8px 12px' }}>
                   {inst.status !== 'PAID' && (
                     <button
-                      onClick={() => void payInstallmentMutation.mutateAsync(inst.id)}
-                      disabled={payInstallmentMutation.isPending}
-                      style={{ ...btnStyle, background: 'var(--color-primary)', color: '#fff' }}
+                      onClick={() => void handlePayInstallment(inst.id)}
+                      disabled={payingInstallmentId === inst.id}
+                      style={{
+                        ...btnStyle,
+                        background: 'var(--color-primary)',
+                        color: '#fff',
+                        opacity: payingInstallmentId === inst.id ? 0.6 : 1,
+                      }}
                     >
                       Marcar como pago
                     </button>
@@ -266,9 +296,14 @@ export function FinanceDashboardPage() {
                 <td style={{ padding: '8px 12px' }}>
                   {log.status === 'PENDING' && (
                     <button
-                      onClick={() => void payExpenseLogMutation.mutateAsync(log.id)}
-                      disabled={payExpenseLogMutation.isPending}
-                      style={{ ...btnStyle, background: 'var(--color-danger)', color: '#fff' }}
+                      onClick={() => void handlePayExpenseLog(log.id)}
+                      disabled={payingExpenseLogId === log.id}
+                      style={{
+                        ...btnStyle,
+                        background: 'var(--color-danger, #dc2626)',
+                        color: '#fff',
+                        opacity: payingExpenseLogId === log.id ? 0.6 : 1,
+                      }}
                     >
                       Marcar como pago
                     </button>
