@@ -10,7 +10,11 @@ export default async function globalTeardown() {
   if (fs.existsSync(pidFile)) {
     const pid = parseInt(fs.readFileSync(pidFile, 'utf-8').trim(), 10);
     try {
-      process.kill(pid);
+      if (process.platform === 'win32') {
+        try { execSync(`taskkill /F /T /PID ${pid}`, { stdio: 'pipe' }); } catch { /* already gone */ }
+      } else {
+        process.kill(pid);
+      }
     } catch {
       // process may have already exited
     }

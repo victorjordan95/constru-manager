@@ -105,9 +105,12 @@ export default async function globalSetup() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'admin@constru.dev', password: 'admin123' }),
   });
-  const { accessToken } = await loginRes.json() as { accessToken: string };
+  if (!loginRes.ok) throw new Error(`[e2e] Admin login failed: ${loginRes.status}`);
+  const loginData = (await loginRes.json()) as { accessToken: string };
+  if (!loginData.accessToken) throw new Error('[e2e] Admin login returned no accessToken');
+  const { accessToken } = loginData;
 
-  await fetch('http://localhost:3001/auth/register', {
+  const registerRes = await fetch('http://localhost:3001/auth/register', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -119,6 +122,10 @@ export default async function globalSetup() {
       role: 'FINANCE',
     }),
   });
+  if (!registerRes.ok) {
+    const body = await registerRes.text();
+    throw new Error(`[e2e] FINANCE user registration failed: ${registerRes.status} ${body}`);
+  }
 
   console.log('[e2e] Setup complete.');
 }
