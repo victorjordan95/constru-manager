@@ -239,7 +239,11 @@ export function QuoteDetailPage() {
         </div>
       )}
       {showAcceptModal && (
-        <AcceptQuoteModal quoteId={quote.id} onClose={() => setShowAcceptModal(false)} />
+        <AcceptQuoteModal
+          quoteId={quote.id}
+          total={quote.activeVersion!.total}
+          onClose={() => setShowAcceptModal(false)}
+        />
       )}
     </div>
   )
