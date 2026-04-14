@@ -216,6 +216,7 @@ model StockMovement {
 }
 
 model FinanceSettings {
-  id             String @id @default("singleton")
-  openingBalance Int    @default(0)
+  id             String   @id @default("singleton")
+  openingBalance Int      @default(0) // stored in cents
+  updatedAt      DateTime @updatedAt
 }
