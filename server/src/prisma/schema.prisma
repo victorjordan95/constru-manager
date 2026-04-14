@@ -201,6 +201,8 @@ model FixedExpenseLog {
   status         ExpenseLogStatus @default(PENDING)
   paidAt         DateTime?
   transaction    CashTransaction?
+
+  @@unique([fixedExpenseId, month, year])
 }
 
 model StockMovement {
@@ -211,4 +213,9 @@ model StockMovement {
   quantity  Int
   reason    String
   createdAt DateTime     @default(now())
+}
+
+model FinanceSettings {
+  id             String @id @default("singleton")
+  openingBalance Int    @default(0)
 }
