@@ -74,7 +74,7 @@ export async function getFinanceSummary(month: number, year: number) {
 
   // Projected values
   const incoming = installments
-    .filter((i) => i.status === 'PENDING')
+    .filter((i) => i.status !== 'PAID')
     .reduce((s, i) => s + i.amount, 0);
   const outgoing = expenseLogs
     .filter((l) => l.status === 'PENDING')
@@ -98,7 +98,8 @@ export async function getFinanceSummary(month: number, year: number) {
     openingBalance,
     month,
     year,
-    projected: { incoming, outgoing, netProfit },
+    projected: { incoming, outgoing },
+    realized: { netProfit },
     installments: installments.map((i) => ({
       id: i.id,
       dueDate: i.dueDate.toISOString().slice(0, 10),

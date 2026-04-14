@@ -86,7 +86,6 @@ afterAll(async () => {
     const qIds = quotes.map((q) => q.id);
     const versions = await prisma.quoteVersion.findMany({ where: { quoteId: { in: qIds } }, select: { id: true } });
     await prisma.quoteItem.deleteMany({ where: { quoteVersionId: { in: versions.map((v) => v.id) } } });
-    await prisma.quoteVersion.updateMany({ where: { quoteId: { in: qIds } }, data: { } });
     await prisma.quote.updateMany({ where: { id: { in: qIds } }, data: { activeVersionId: null } });
     await prisma.quoteVersion.deleteMany({ where: { quoteId: { in: qIds } } });
     await prisma.quote.deleteMany({ where: { id: { in: qIds } } });
@@ -163,7 +162,7 @@ describe('GET /finance/summary', () => {
     expect(typeof res.body.balance).toBe('number');
     expect(typeof res.body.projected.incoming).toBe('number');
     expect(typeof res.body.projected.outgoing).toBe('number');
-    expect(typeof res.body.projected.netProfit).toBe('number');
+    expect(typeof res.body.realized.netProfit).toBe('number');
     expect(Array.isArray(res.body.installments)).toBe(true);
     expect(Array.isArray(res.body.expenseLogs)).toBe(true);
   });
