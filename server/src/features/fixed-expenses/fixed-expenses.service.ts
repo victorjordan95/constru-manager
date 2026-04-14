@@ -1,16 +1,16 @@
-import { Prisma } from '@prisma/client'
-import { prisma } from '../../lib/prisma'
-import { CreateFixedExpenseInput, UpdateFixedExpenseInput } from './fixed-expenses.types'
+import { Prisma } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
+import { CreateFixedExpenseInput, UpdateFixedExpenseInput } from './fixed-expenses.types';
 
 export function listFixedExpenses() {
   return prisma.fixedExpense.findMany({
     where: { isActive: true },
     orderBy: { name: 'asc' },
-  })
+  });
 }
 
 export function getFixedExpense(id: string) {
-  return prisma.fixedExpense.findFirst({ where: { id, isActive: true } })
+  return prisma.fixedExpense.findFirst({ where: { id, isActive: true } });
 }
 
 export function createFixedExpense(data: CreateFixedExpenseInput) {
@@ -21,7 +21,7 @@ export function createFixedExpense(data: CreateFixedExpenseInput) {
       dueDay: data.dueDay,
       category: data.category ?? null,
     },
-  })
+  });
 }
 
 export async function updateFixedExpense(id: string, data: UpdateFixedExpenseInput) {
@@ -34,23 +34,23 @@ export async function updateFixedExpense(id: string, data: UpdateFixedExpenseInp
         ...(data.dueDay !== undefined && { dueDay: data.dueDay }),
         ...(data.category !== undefined && { category: data.category }),
       },
-    })
+    });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
-      return null
+      return null;
     }
-    throw err
+    throw err;
   }
 }
 
 export async function softDeleteFixedExpense(id: string): Promise<boolean> {
   try {
-    await prisma.fixedExpense.update({ where: { id, isActive: true }, data: { isActive: false } })
-    return true
+    await prisma.fixedExpense.update({ where: { id, isActive: true }, data: { isActive: false } });
+    return true;
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
-      return false
+      return false;
     }
-    throw err
+    throw err;
   }
 }
