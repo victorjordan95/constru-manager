@@ -33,18 +33,21 @@ npx prisma db seed
 |---------|-------|-------|-------|
 | Administrador | admin@constru.dev | admin123 | ADMIN |
 | Vendedor | vendas@constru.dev | sales123 | SALES |
+| Financeiro | financeiro@constru.dev | finance123 | FINANCE |
 
 ---
 
 ## Papéis e permissões
 
-| Funcionalidade | ADMIN | SALES |
-|----------------|-------|-------|
-| Clientes | ✓ | ✓ |
-| Produtos | ✓ | — |
-| Kits | ✓ | — |
-| Orçamentos | ✓ | ✓ |
-| Registrar usuários | ✓ | — |
+| Funcionalidade | ADMIN | SALES | FINANCE |
+|----------------|-------|-------|---------|
+| Clientes | ✓ | ✓ | — |
+| Produtos | ✓ | — | — |
+| Kits | ✓ | — | — |
+| Orçamentos | ✓ | ✓ | — |
+| Financeiro | ✓ | — | ✓ |
+| Despesas Fixas | ✓ | — | ✓ |
+| Registrar usuários | ✓ | — | — |
 
 ---
 
@@ -103,6 +106,44 @@ Ao clicar em **Aceitar**:
 
 ---
 
+## Módulo financeiro
+
+Acessível pelos papéis **ADMIN** e **FINANCE** via menu *Financeiro* e *Despesas Fixas*.
+
+### Saldo em Caixa
+
+O saldo exibido é calculado automaticamente:
+
+```
+Saldo = Saldo Inicial + Σ receitas pagas − Σ despesas pagas
+```
+
+Para definir o saldo inicial, clique em **Editar saldo inicial** no card de saldo e informe o valor em reais (ex: `5000.00`).
+
+### Dashboard mensal
+
+Use as setas `< >` para navegar entre meses. O dashboard exibe:
+
+| Card | Descrição |
+|------|-----------|
+| **Previsto Entrar** | Soma das parcelas pendentes/vencidas no mês |
+| **Previsto Sair** | Soma das despesas fixas pendentes no mês |
+| **Lucro Líquido** | Receitas pagas menos despesas pagas no mês |
+
+### Marcar parcelas como pagas
+
+A tabela *Parcelas do Mês* lista todas as parcelas com vencimento no mês selecionado. Clique em **Marcar como pago** para registrar o recebimento — o saldo é atualizado automaticamente.
+
+### Despesas Fixas
+
+Menu *Despesas Fixas* → **Nova Despesa** para cadastrar uma despesa recorrente (ex: aluguel, energia).
+
+Campos: Nome, Valor (R$), Dia de Vencimento (1–28), Categoria (opcional).
+
+A cada vez que o dashboard financeiro é aberto para um mês, as despesas fixas ativas são registradas automaticamente para aquele mês. Na tabela *Despesas Fixas do Mês*, clique em **Marcar como pago** para registrar o pagamento.
+
+---
+
 ## Cadastro de novos usuários
 
 Apenas usuários com papel **ADMIN** podem registrar novos usuários.
@@ -145,3 +186,12 @@ Papéis disponíveis: `ADMIN`, `SALES`, `FINANCE`
 | POST | `/quotes/:id/versions` | Adicionar revisão |
 | PATCH | `/quotes/:id/status` | Atualizar status |
 | POST | `/quotes/:id/accept` | Aceitar (gera venda) |
+| GET | `/fixed-expenses` | Listar despesas fixas |
+| POST | `/fixed-expenses` | Criar despesa fixa |
+| PUT | `/fixed-expenses/:id` | Editar despesa fixa |
+| DELETE | `/fixed-expenses/:id` | Desativar despesa fixa |
+| GET | `/finance/balance` | Consultar saldo inicial |
+| PUT | `/finance/balance` | Definir saldo inicial |
+| GET | `/finance/summary` | Dashboard mensal (`?month=&year=`) |
+| PATCH | `/finance/installments/:id/pay` | Marcar parcela como paga |
+| PATCH | `/finance/expense-logs/:id/pay` | Marcar despesa fixa do mês como paga |
