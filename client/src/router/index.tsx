@@ -15,6 +15,9 @@ import { QuotesListPage } from '@/features/quotes/QuotesListPage'
 import { QuoteFormPage } from '@/features/quotes/QuoteFormPage'
 import { QuoteDetailPage } from '@/features/quotes/QuoteDetailPage'
 import { QuoteVersionFormPage } from '@/features/quotes/QuoteVersionFormPage'
+import { FixedExpensesListPage } from '@/features/fixed-expenses/FixedExpensesListPage'
+import { FixedExpenseFormPage } from '@/features/fixed-expenses/FixedExpenseFormPage'
+import { FinanceDashboardPage } from '@/features/finance/FinanceDashboardPage'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -136,6 +139,30 @@ const quoteAddVersionRoute = createRoute({
   component: QuoteVersionFormPage,
 })
 
+const fixedExpensesRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/fixed-expenses',
+  component: FixedExpensesListPage,
+})
+
+const fixedExpenseCreateRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/fixed-expenses/new',
+  component: FixedExpenseFormPage,
+})
+
+const fixedExpenseEditRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/fixed-expenses/$id/edit',
+  component: FixedExpenseFormPage,
+})
+
+const financeDashboardRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/finance',
+  component: FinanceDashboardPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authenticatedRoute.addChildren([
@@ -153,6 +180,10 @@ const routeTree = rootRoute.addChildren([
     quoteCreateRoute,
     quoteDetailRoute,
     quoteAddVersionRoute,
+    fixedExpensesRoute,
+    fixedExpenseCreateRoute,
+    fixedExpenseEditRoute,
+    financeDashboardRoute,
   ]),
 ])
 

@@ -77,6 +77,20 @@ export function AppLayout() {
               </Link>
             </li>
           )}
+          {(user?.role === 'ADMIN' || user?.role === 'FINANCE') && (
+            <li>
+              <Link to="/finance" style={linkStyle}>
+                Financeiro
+              </Link>
+            </li>
+          )}
+          {(user?.role === 'ADMIN' || user?.role === 'FINANCE') && (
+            <li>
+              <Link to="/fixed-expenses" style={linkStyle}>
+                Despesas Fixas
+              </Link>
+            </li>
+          )}
         </ul>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: 'var(--space-2)' }}>
           <p style={{ fontSize: '0.75rem', marginBottom: 4, opacity: 0.7 }}>{user?.role}</p>
