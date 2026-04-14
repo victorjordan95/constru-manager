@@ -83,6 +83,8 @@ export function QuoteVersionFormPage() {
 
   const total = subtotal + laborCostCents - discountCents
 
+  const selectOnFocus = (e: React.FocusEvent<HTMLInputElement>) => e.target.select()
+
   function addItem() {
     setItems((prev) => [...prev, emptyRow(nextKey)])
     setNextKey((k) => k + 1)
@@ -286,6 +288,7 @@ export function QuoteVersionFormPage() {
               step="0.01"
               value={laborCostStr}
               onChange={(e) => setLaborCostStr(e.target.value)}
+              onFocus={selectOnFocus}
               style={inputStyle}
             />
           </label>
@@ -297,6 +300,7 @@ export function QuoteVersionFormPage() {
               step="0.01"
               value={discountStr}
               onChange={(e) => setDiscountStr(e.target.value)}
+              onFocus={selectOnFocus}
               style={inputStyle}
             />
           </label>
