@@ -100,7 +100,7 @@ afterAll(async () => {
   await prisma.fixedExpense.delete({ where: { id: fixedExpenseId } });
 
   // Clean up finance settings
-  await prisma.financeSettings.deleteMany({});
+  await prisma.financeSettings.deleteMany({ where: { id: 'singleton' } });
 
   // Clean up users
   await prisma.user.deleteMany({ where: { email: { startsWith: UNIQUE } } });
