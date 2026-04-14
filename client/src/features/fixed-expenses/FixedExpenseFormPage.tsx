@@ -20,6 +20,7 @@ export function FixedExpenseFormPage() {
   const { data: existing } = useFixedExpense(id ?? '', { enabled: isEdit });
   const createMutation = useCreateFixedExpense();
   const updateMutation = useUpdateFixedExpense();
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   const [form, setForm] = useState<FormState>(empty);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export function FixedExpenseFormPage() {
       setForm(empty);
       setServerError(null);
     }
-  }, [existing, isEdit]);
+  }, [existing, isEdit, id]);
 
   function set(field: keyof FormState, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -56,7 +57,7 @@ export function FixedExpenseFormPage() {
       return;
     }
     const payload = {
-      name: form.name,
+      name: form.name.trim(),
       amount,
       dueDay,
       ...(form.category && { category: form.category }),
@@ -97,8 +98,9 @@ export function FixedExpenseFormPage() {
       </h1>
       <form onSubmit={(e) => void handleSubmit(e)}>
         <div style={fieldStyle}>
-          <label style={labelStyle}>Nome *</label>
+          <label htmlFor="fe-name" style={labelStyle}>Nome *</label>
           <input
+            id="fe-name"
             style={inputStyle}
             value={form.name}
             onChange={(e) => set('name', e.target.value)}
@@ -106,8 +108,9 @@ export function FixedExpenseFormPage() {
           />
         </div>
         <div style={fieldStyle}>
-          <label style={labelStyle}>Valor (R$) *</label>
+          <label htmlFor="fe-amount" style={labelStyle}>Valor (R$) *</label>
           <input
+            id="fe-amount"
             style={inputStyle}
             type="number"
             step="0.01"
@@ -119,8 +122,9 @@ export function FixedExpenseFormPage() {
           />
         </div>
         <div style={fieldStyle}>
-          <label style={labelStyle}>Dia de Vencimento (1–28) *</label>
+          <label htmlFor="fe-dueDay" style={labelStyle}>Dia de Vencimento (1–28) *</label>
           <input
+            id="fe-dueDay"
             style={inputStyle}
             type="number"
             min="1"
@@ -131,8 +135,9 @@ export function FixedExpenseFormPage() {
           />
         </div>
         <div style={fieldStyle}>
-          <label style={labelStyle}>Categoria</label>
+          <label htmlFor="fe-category" style={labelStyle}>Categoria</label>
           <input
+            id="fe-category"
             style={inputStyle}
             value={form.category}
             onChange={(e) => set('category', e.target.value)}
@@ -146,17 +151,19 @@ export function FixedExpenseFormPage() {
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           <button
             type="submit"
+            disabled={isPending}
             style={{
               background: 'var(--color-primary)',
               color: 'var(--color-surface)',
               border: 'none',
               padding: 'var(--space-1) var(--space-3)',
               borderRadius: 4,
-              cursor: 'pointer',
+              cursor: isPending ? 'not-allowed' : 'pointer',
               fontWeight: 600,
+              opacity: isPending ? 0.7 : 1,
             }}
           >
-            {isEdit ? 'Salvar' : 'Criar'}
+            {isPending ? 'Salvando...' : isEdit ? 'Salvar' : 'Criar'}
           </button>
           <button
             type="button"

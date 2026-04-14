@@ -64,7 +64,7 @@ export function FixedExpensesListPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--color-neutral-200)', textAlign: 'left' }}>
-              {['Nome', 'Categoria', 'Dia Venc.', 'Valor', 'Ações'].map((h) => (
+              {['Nome', 'Valor', 'Categoria', 'Dia Venc.', 'Ações'].map((h) => (
                 <th key={h} style={{ padding: '8px 12px', fontSize: '0.85rem' }}>
                   {h}
                 </th>
@@ -75,12 +75,12 @@ export function FixedExpensesListPage() {
             {expenses?.map((e) => (
               <tr key={e.id} style={{ borderBottom: '1px solid var(--color-neutral-200)' }}>
                 <td style={{ padding: '8px 12px' }}>{e.name}</td>
+                <td style={{ padding: '8px 12px' }}>{formatCurrency(e.amount)}</td>
                 <td style={{ padding: '8px 12px', color: 'var(--color-neutral-600)' }}>
                   {e.category ?? '—'}
                 </td>
                 <td style={{ padding: '8px 12px' }}>Dia {e.dueDay}</td>
-                <td style={{ padding: '8px 12px' }}>{formatCurrency(e.amount)}</td>
-                <td style={{ padding: '8px 12px', display: 'flex', gap: 6 }}>
+                <td style={{ padding: '8px 12px' }}><div style={{ display: 'flex', gap: 6 }}>
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   <Link to={'/fixed-expenses/$id/edit' as any} params={{ id: e.id }}>
                     <button
@@ -105,7 +105,7 @@ export function FixedExpensesListPage() {
                   >
                     Desativar
                   </button>
-                </td>
+                </div></td>
               </tr>
             ))}
           </tbody>
