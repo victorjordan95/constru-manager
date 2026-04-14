@@ -1,15 +1,26 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { useQuotes } from './hooks'
+import { useQuotes, useUpdateStatus } from './hooks'
 import { STATUS_LABEL, STATUS_COLOR } from './statusLabels'
 import { formatCurrency } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
+import { AcceptQuoteModal } from './AcceptQuoteModal'
+import type { QuoteStatus } from './types'
 
 export function QuotesListPage() {
   const { data: quotes, isLoading, error } = useQuotes()
   const { user } = useAuthStore()
+  const updateStatusMutation = useUpdateStatus()
+  const [acceptModal, setAcceptModal] = useState<{ quoteId: string; total: number } | null>(null)
+
+  const isAdmin = user?.role === 'ADMIN'
 
   if (isLoading) return <p style={{ color: 'var(--color-neutral-600)' }}>Carregando...</p>
   if (error) return <p style={{ color: 'var(--color-danger)' }}>Erro ao carregar orçamentos.</p>
+
+  function canShowActions(status: QuoteStatus): boolean {
+    return isAdmin && status !== 'ACCEPTED' && status !== 'DRAFT'
+  }
 
   return (
     <div>
@@ -69,6 +80,9 @@ export function QuotesListPage() {
             )}
             {quotes?.map((q) => {
               const colors = STATUS_COLOR[q.status] ?? { bg: 'var(--color-neutral-100)', text: 'var(--color-neutral-600)' }
+              const showActions = canShowActions(q.status)
+              const isMutating = updateStatusMutation.isPending
+
               return (
                 <tr key={q.id} style={{ borderTop: '1px solid var(--color-neutral-300)' }}>
                   <td style={tdStyle}>{q.client.name}</td>
@@ -97,21 +111,54 @@ export function QuotesListPage() {
                     {new Date(q.createdAt).toLocaleDateString('pt-BR')}
                   </td>
                   <td style={tdStyle}>
-                    <Link to="/quotes/$id" params={{ id: q.id }}>
-                      <button
-                        style={{
-                          background: 'var(--color-primary-bg)',
-                          color: 'var(--color-primary)',
-                          border: 'none',
-                          padding: '4px 10px',
-                          borderRadius: 4,
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                        }}
-                      >
-                        Ver
-                      </button>
-                    </Link>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <Link to="/quotes/$id" params={{ id: q.id }}>
+                        <button style={btnSecondary}>Ver</button>
+                      </Link>
+                      {showActions && (
+                        <>
+                          {q.activeVersion && (
+                            <button
+                              disabled={isMutating}
+                              onClick={() =>
+                                setAcceptModal({ quoteId: q.id, total: q.activeVersion!.total })
+                              }
+                              style={{ ...btnSuccess, opacity: isMutating ? 0.6 : 1 }}
+                            >
+                              Aceitar
+                            </button>
+                          )}
+                          {q.status !== 'REJECTED' && (
+                            <button
+                              disabled={isMutating}
+                              onClick={() =>
+                                updateStatusMutation.mutate({
+                                  id: q.id,
+                                  payload: { status: 'REJECTED' },
+                                })
+                              }
+                              style={{ ...btnDanger, opacity: isMutating ? 0.6 : 1 }}
+                            >
+                              Recusar
+                            </button>
+                          )}
+                          {q.status !== 'NO_RESPONSE' && (
+                            <button
+                              disabled={isMutating}
+                              onClick={() =>
+                                updateStatusMutation.mutate({
+                                  id: q.id,
+                                  payload: { status: 'NO_RESPONSE' },
+                                })
+                              }
+                              style={{ ...btnNeutral, opacity: isMutating ? 0.6 : 1 }}
+                            >
+                              Sem Retorno
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )
@@ -119,6 +166,14 @@ export function QuotesListPage() {
           </tbody>
         </table>
       </div>
+
+      {acceptModal && (
+        <AcceptQuoteModal
+          quoteId={acceptModal.quoteId}
+          total={acceptModal.total}
+          onClose={() => setAcceptModal(null)}
+        />
+      )}
     </div>
   )
 }
@@ -132,4 +187,48 @@ const thStyle: React.CSSProperties = {
 
 const tdStyle: React.CSSProperties = {
   padding: 'var(--space-1) var(--space-2)',
+}
+
+const btnSecondary: React.CSSProperties = {
+  background: 'var(--color-primary-bg)',
+  color: 'var(--color-primary)',
+  border: 'none',
+  padding: '4px 10px',
+  borderRadius: 4,
+  cursor: 'pointer',
+  fontSize: '0.8rem',
+  fontWeight: 500,
+}
+
+const btnSuccess: React.CSSProperties = {
+  background: 'var(--color-success)',
+  color: 'var(--color-surface)',
+  border: 'none',
+  padding: '4px 10px',
+  borderRadius: 4,
+  cursor: 'pointer',
+  fontSize: '0.8rem',
+  fontWeight: 600,
+}
+
+const btnDanger: React.CSSProperties = {
+  background: 'var(--color-danger-bg)',
+  color: 'var(--color-danger)',
+  border: 'none',
+  padding: '4px 10px',
+  borderRadius: 4,
+  cursor: 'pointer',
+  fontSize: '0.8rem',
+  fontWeight: 500,
+}
+
+const btnNeutral: React.CSSProperties = {
+  background: 'var(--color-neutral-100)',
+  color: 'var(--color-neutral-600)',
+  border: '1px solid var(--color-neutral-300)',
+  padding: '4px 10px',
+  borderRadius: 4,
+  cursor: 'pointer',
+  fontSize: '0.8rem',
+  fontWeight: 500,
 }
