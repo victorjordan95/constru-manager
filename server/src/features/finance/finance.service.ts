@@ -150,6 +150,66 @@ export async function payInstallment(id: string) {
   return { installment: updated };
 }
 
+// ─── Cashflow ─────────────────────────────────────────────────────────────────
+
+export async function getCashflow(months: number) {
+  const now = new Date();
+  const results: Array<{ month: number; year: number; income: number; expense: number }> = [];
+
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const month = d.getMonth() + 1;
+    const year = d.getFullYear();
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 1);
+
+    const transactions = await prisma.cashTransaction.findMany({
+      where: { date: { gte: start, lt: end } },
+      select: { type: true, amount: true },
+    });
+
+    const income = transactions
+      .filter((t) => t.type === 'INCOME')
+      .reduce((s, t) => s + t.amount, 0);
+    const expense = transactions
+      .filter((t) => t.type === 'EXPENSE')
+      .reduce((s, t) => s + t.amount, 0);
+
+    results.push({ month, year, income, expense });
+  }
+
+  return results;
+}
+
+// ─── Overdue installments ──────────────────────────────────────────────────────
+
+export async function getOverdueInstallments() {
+  const now = new Date();
+
+  const installments = await prisma.installment.findMany({
+    where: {
+      status: 'PENDING',
+      dueDate: { lt: now },
+    },
+    include: {
+      sale: {
+        include: {
+          quote: { include: { client: { select: { name: true } } } },
+        },
+      },
+    },
+    orderBy: { dueDate: 'asc' },
+  });
+
+  return installments.map((inst) => ({
+    id: inst.id,
+    clientName: inst.sale.quote.client.name,
+    amount: inst.amount,
+    dueDate: inst.dueDate.toISOString().slice(0, 10),
+    daysOverdue: Math.floor((now.getTime() - inst.dueDate.getTime()) / (1000 * 60 * 60 * 24)),
+  }));
+}
+
 // ─── Pay expense log ──────────────────────────────────────────────────────────
 
 export async function payExpenseLog(id: string) {

@@ -11,3 +11,9 @@ export const updateBalanceSchema = z.object({
 
 export type SummaryQuery = z.infer<typeof summaryQuerySchema>;
 export type UpdateBalanceInput = z.infer<typeof updateBalanceSchema>;
+
+export const cashflowQuerySchema = z.object({
+  months: z.coerce.number().int().min(1).max(24).default(6),
+});
+
+export type CashflowQuery = z.infer<typeof cashflowQuerySchema>;

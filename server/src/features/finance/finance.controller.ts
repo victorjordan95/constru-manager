@@ -5,8 +5,10 @@ import {
   getFinanceSummary,
   payInstallment,
   payExpenseLog,
+  getCashflow,
+  getOverdueInstallments,
 } from './finance.service';
-import { summaryQuerySchema, updateBalanceSchema } from './finance.types';
+import { summaryQuerySchema, updateBalanceSchema, cashflowQuerySchema } from './finance.types';
 
 export async function handleGetBalance(
   _req: Request,
@@ -52,6 +54,37 @@ export async function handleGetSummary(
     }
     const summary = await getFinanceSummary(parsed.data.month, parsed.data.year);
     res.json(summary);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleGetCashflow(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const parsed = cashflowQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid query params', code: 'VALIDATION_ERROR' });
+      return;
+    }
+    const data = await getCashflow(parsed.data.months);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleGetOverdue(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const data = await getOverdueInstallments();
+    res.json(data);
   } catch (err) {
     next(err);
   }
