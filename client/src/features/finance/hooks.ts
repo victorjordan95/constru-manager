@@ -1,10 +1,31 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getFinanceSummary, updateBalance, payInstallment, payExpenseLog } from './api';
+import {
+  getFinanceSummary,
+  updateBalance,
+  payInstallment,
+  payExpenseLog,
+  getCashflow,
+  getOverdueInstallments,
+} from './api';
 
 export function useFinanceSummary(month: number, year: number) {
   return useQuery({
     queryKey: ['finance', 'summary', month, year],
     queryFn: () => getFinanceSummary(month, year),
+  });
+}
+
+export function useFinanceCashflow(months = 6) {
+  return useQuery({
+    queryKey: ['finance', 'cashflow', months],
+    queryFn: () => getCashflow(months),
+  });
+}
+
+export function useOverdueInstallments() {
+  return useQuery({
+    queryKey: ['finance', 'overdue'],
+    queryFn: getOverdueInstallments,
   });
 }
 
@@ -20,7 +41,7 @@ export function usePayInstallment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => payInstallment(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['finance', 'summary'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['finance'] }),
   });
 }
 
@@ -28,6 +49,6 @@ export function usePayExpenseLog() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => payExpenseLog(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['finance', 'summary'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['finance'] }),
   });
 }

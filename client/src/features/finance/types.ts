@@ -16,6 +16,21 @@ export interface ExpenseLogSummaryItem {
   status: 'PENDING' | 'PAID';
 }
 
+export interface CashflowMonth {
+  month: number;
+  year: number;
+  income: number;
+  expense: number;
+}
+
+export interface OverdueInstallment {
+  id: string;
+  clientName: string;
+  amount: number;
+  dueDate: string;
+  daysOverdue: number;
+}
+
 export interface FinanceSummary {
   balance: number;
   openingBalance: number;

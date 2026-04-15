@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import { useFinanceSummary, useUpdateOpeningBalance, usePayInstallment, usePayExpenseLog } from './hooks';
+import { useFinanceSummary, useUpdateOpeningBalance, usePayInstallment, usePayExpenseLog, useOverdueInstallments } from './hooks';
 import { formatCurrency } from '@/lib/format';
+import { CashFlowChart } from './CashFlowChart';
 
 const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -33,6 +34,7 @@ export function FinanceDashboardPage() {
   const updateBalanceMutation = useUpdateOpeningBalance();
   const payInstallmentMutation = usePayInstallment();
   const payExpenseLogMutation = usePayExpenseLog();
+  const { data: overdueData } = useOverdueInstallments();
 
   function prevMonth() {
     if (month === 1) { setMonth(12); setYear((y) => y - 1); }
@@ -93,31 +95,119 @@ export function FinanceDashboardPage() {
     fontWeight: 600,
   };
 
-  const netProfit = data.realized.netProfit;
+  const netProfit = data.projected.incoming - data.projected.outgoing;
 
   return (
     <div>
-      {/* Month selector */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+      {/* Header + Month selector */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
         <h1 style={{ fontSize: '1.5rem' }}>Financeiro</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0,
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-neutral-300)',
+            borderRadius: 8,
+            overflow: 'hidden',
+          }}
+        >
           <button
             onClick={prevMonth}
-            style={{ ...btnStyle, background: 'var(--color-neutral-200)', color: 'var(--color-neutral-900)' }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              borderRight: '1px solid var(--color-neutral-300)',
+              cursor: 'pointer',
+              padding: '10px 18px',
+              fontSize: '1rem',
+              color: 'var(--color-primary)',
+              fontWeight: 700,
+              lineHeight: 1,
+            }}
           >
-            {'<'}
+            ‹
           </button>
-          <span style={{ fontWeight: 600, minWidth: 140, textAlign: 'center' }}>
+          <span style={{ fontWeight: 700, fontSize: '1rem', minWidth: 160, textAlign: 'center', padding: '10px 8px', color: 'var(--color-neutral-900)' }}>
             {MONTH_NAMES[month - 1]} {year}
           </span>
           <button
             onClick={nextMonth}
-            style={{ ...btnStyle, background: 'var(--color-neutral-200)', color: 'var(--color-neutral-900)' }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              borderLeft: '1px solid var(--color-neutral-300)',
+              cursor: 'pointer',
+              padding: '10px 18px',
+              fontSize: '1rem',
+              color: 'var(--color-primary)',
+              fontWeight: 700,
+              lineHeight: 1,
+            }}
           >
-            {'>'}
+            ›
           </button>
         </div>
       </div>
+
+      {/* Overdue installments */}
+      {overdueData && overdueData.length > 0 && (
+        <div
+          style={{
+            background: 'var(--color-danger-bg, #fef2f2)',
+            border: '1px solid var(--color-danger, #dc2626)',
+            borderRadius: 8,
+            padding: 'var(--space-2) var(--space-3)',
+            marginBottom: 'var(--space-3)',
+          }}
+        >
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-danger)', marginBottom: 'var(--space-2)' }}>
+            ⚠ Inadimplência — {overdueData.length} parcela{overdueData.length > 1 ? 's' : ''} vencida{overdueData.length > 1 ? 's' : ''}
+          </h2>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+            <thead>
+              <tr style={{ background: 'rgba(220,38,38,0.08)', textAlign: 'left' }}>
+                {['Cliente', 'Vencimento', 'Dias em atraso', 'Valor', 'Ação'].map((h) => (
+                  <th key={h} style={{ padding: '6px 10px', color: 'var(--color-danger)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {overdueData.map((inst, i) => (
+                <tr
+                  key={inst.id}
+                  style={{
+                    borderTop: '1px solid rgba(220,38,38,0.15)',
+                    background: i % 2 === 1 ? 'rgba(220,38,38,0.04)' : 'transparent',
+                  }}
+                >
+                  <td style={{ padding: '6px 10px' }}>{inst.clientName}</td>
+                  <td style={{ padding: '6px 10px' }}>{new Date(inst.dueDate + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+                  <td style={{ padding: '6px 10px', color: 'var(--color-danger)', fontWeight: 600 }}>
+                    {inst.daysOverdue} dia{inst.daysOverdue !== 1 ? 's' : ''}
+                  </td>
+                  <td style={{ padding: '6px 10px', fontWeight: 600 }}>{formatCurrency(inst.amount)}</td>
+                  <td style={{ padding: '6px 10px' }}>
+                    <button
+                      onClick={() => void handlePayInstallment(inst.id)}
+                      disabled={payingInstallmentId === inst.id}
+                      style={{
+                        ...btnStyle,
+                        background: 'var(--color-danger)',
+                        color: '#fff',
+                        opacity: payingInstallmentId === inst.id ? 0.6 : 1,
+                      }}
+                    >
+                      {payingInstallmentId === inst.id ? 'Salvando...' : 'Marcar como pago'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Balance card */}
       <div
@@ -214,28 +304,31 @@ export function FinanceDashboardPage() {
           >
             {formatCurrency(netProfit)}
           </p>
-          <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)' }}>Entradas pagas − saídas pagas</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)' }}>Previsto entrar − previsto sair</p>
         </div>
       </div>
+
+      <CashFlowChart />
 
       {/* Installments table */}
       <h2 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-2)' }}>Parcelas do Mês</h2>
       {data.installments.length === 0 ? (
         <p style={{ color: 'var(--color-neutral-600)', marginBottom: 'var(--space-4)' }}>Nenhuma parcela neste mês.</p>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 'var(--space-4)' }}>
+        <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-neutral-300)', borderRadius: 8, overflow: 'hidden', marginBottom: 'var(--space-4)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: 'var(--color-neutral-200)', textAlign: 'left' }}>
+            <tr style={{ background: 'var(--color-primary-bg)', textAlign: 'left' }}>
               {['Cliente', 'Vencimento', 'Valor', 'Status', 'Ação'].map((h) => (
-                <th key={h} style={{ padding: '8px 12px', fontSize: '0.85rem' }}>
+                <th key={h} style={{ padding: '8px 12px', fontSize: '0.85rem', color: 'var(--color-primary)' }}>
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {data.installments.map((inst) => (
-              <tr key={inst.id} style={{ borderBottom: '1px solid var(--color-neutral-200)' }}>
+            {data.installments.map((inst, i) => (
+              <tr key={inst.id} style={{ borderTop: '1px solid var(--color-neutral-300)', background: i % 2 === 1 ? 'var(--color-neutral-100)' : 'transparent' }}>
                 <td style={{ padding: '8px 12px' }}>{inst.clientName}</td>
                 <td style={{ padding: '8px 12px' }}>{inst.dueDate}</td>
                 <td style={{ padding: '8px 12px' }}>{formatCurrency(inst.amount)}</td>
@@ -264,6 +357,7 @@ export function FinanceDashboardPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       {/* Expense logs table */}
@@ -271,19 +365,20 @@ export function FinanceDashboardPage() {
       {data.expenseLogs.length === 0 ? (
         <p style={{ color: 'var(--color-neutral-600)' }}>Nenhuma despesa fixa ativa.</p>
       ) : (
+        <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-neutral-300)', borderRadius: 8, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: 'var(--color-neutral-200)', textAlign: 'left' }}>
+            <tr style={{ background: 'var(--color-primary-bg)', textAlign: 'left' }}>
               {['Despesa', 'Categoria', 'Dia', 'Valor', 'Status', 'Ação'].map((h) => (
-                <th key={h} style={{ padding: '8px 12px', fontSize: '0.85rem' }}>
+                <th key={h} style={{ padding: '8px 12px', fontSize: '0.85rem', color: 'var(--color-primary)' }}>
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {data.expenseLogs.map((log) => (
-              <tr key={log.id} style={{ borderBottom: '1px solid var(--color-neutral-200)' }}>
+            {data.expenseLogs.map((log, i) => (
+              <tr key={log.id} style={{ borderTop: '1px solid var(--color-neutral-300)', background: i % 2 === 1 ? 'var(--color-neutral-100)' : 'transparent' }}>
                 <td style={{ padding: '8px 12px' }}>{log.fixedExpenseName}</td>
                 <td style={{ padding: '8px 12px', color: 'var(--color-neutral-600)' }}>{log.category ?? '—'}</td>
                 <td style={{ padding: '8px 12px' }}>Dia {log.dueDay}</td>
@@ -313,6 +408,7 @@ export function FinanceDashboardPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

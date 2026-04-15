@@ -72,8 +72,8 @@ export function ProductsListPage() {
                 </td>
               </tr>
             )}
-            {products?.map((product) => (
-              <tr key={product.id} style={{ borderTop: '1px solid var(--color-neutral-300)' }}>
+            {products?.map((product, i) => (
+              <tr key={product.id} style={{ borderTop: '1px solid var(--color-neutral-300)', background: i % 2 === 1 ? 'var(--color-neutral-100)' : 'transparent' }}>
                 <td style={{ padding: 'var(--space-1) var(--space-2)' }}>{product.name}</td>
                 <td style={{ padding: 'var(--space-1) var(--space-2)', color: 'var(--color-neutral-600)' }}>{product.unit ?? '—'}</td>
                 <td style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(product.basePrice)}</td>

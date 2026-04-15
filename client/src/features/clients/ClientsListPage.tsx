@@ -65,10 +65,10 @@ export function ClientsListPage() {
                 </td>
               </tr>
             )}
-            {clients?.map((client) => (
+            {clients?.map((client, i) => (
               <tr
                 key={client.id}
-                style={{ borderTop: '1px solid var(--color-neutral-300)' }}
+                style={{ borderTop: '1px solid var(--color-neutral-300)', background: i % 2 === 1 ? 'var(--color-neutral-100)' : 'transparent' }}
               >
                 <td style={{ padding: 'var(--space-1) var(--space-2)' }}>{client.name}</td>
                 <td style={{ padding: 'var(--space-1) var(--space-2)', fontFamily: 'monospace' }}>{client.taxId}</td>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link, useParams } from '@tanstack/react-router'
-import { useQuote, useUpdateStatus } from './hooks'
+import { Link, useParams, useNavigate } from '@tanstack/react-router'
+import { useQuote, useUpdateStatus, useDuplicateQuote } from './hooks'
+import { generateQuotePDF } from './QuotePDF'
 import { STATUS_LABEL, STATUS_COLOR } from './statusLabels'
 import { formatCurrency } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
@@ -13,6 +14,17 @@ export function QuoteDetailPage() {
   const { user } = useAuthStore()
   const [showAcceptModal, setShowAcceptModal] = useState(false)
   const updateStatusMutation = useUpdateStatus()
+  const navigate = useNavigate()
+  const duplicateMutation = useDuplicateQuote()
+
+  function handleDownloadPDF() {
+    if (quote?.activeVersion) generateQuotePDF(quote)
+  }
+
+  async function handleDuplicate() {
+    const result = await duplicateMutation.mutateAsync(quote!.id)
+    void navigate({ to: '/quotes/$id', params: { id: result.id } })
+  }
 
   if (isLoading) return <p style={{ color: 'var(--color-neutral-600)' }}>Carregando...</p>
   if (error || !quote) return <p style={{ color: 'var(--color-danger)' }}>Orçamento não encontrado.</p>
@@ -161,6 +173,42 @@ export function QuoteDetailPage() {
             >
               + Nova Versão
             </Link>
+          )}
+          {quote.activeVersion && (
+            <button
+              onClick={handleDownloadPDF}
+              style={{
+                background: 'var(--color-neutral-100)',
+                color: 'var(--color-neutral-900)',
+                border: '1px solid var(--color-neutral-300)',
+                padding: '6px var(--space-2)',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+              }}
+            >
+              Baixar PDF
+            </button>
+          )}
+          {(user?.role === 'ADMIN' || user?.role === 'SALES') && (
+            <button
+              onClick={() => void handleDuplicate()}
+              disabled={duplicateMutation.isPending}
+              style={{
+                background: 'var(--color-neutral-100)',
+                color: 'var(--color-neutral-900)',
+                border: '1px solid var(--color-neutral-300)',
+                padding: '6px var(--space-2)',
+                borderRadius: 4,
+                cursor: duplicateMutation.isPending ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                opacity: duplicateMutation.isPending ? 0.6 : 1,
+              }}
+            >
+              {duplicateMutation.isPending ? 'Duplicando...' : 'Duplicar'}
+            </button>
           )}
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
-import { useQuotes, useUpdateStatus } from './hooks'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { useQuotes, useUpdateStatus, useDuplicateQuote } from './hooks'
 import { STATUS_LABEL, STATUS_COLOR } from './statusLabels'
 import { formatCurrency } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
@@ -14,6 +14,13 @@ export function QuotesListPage() {
   const [acceptModal, setAcceptModal] = useState<{ quoteId: string; total: number } | null>(null)
 
   const isAdmin = user?.role === 'ADMIN'
+  const navigate = useNavigate()
+  const duplicateMutation = useDuplicateQuote()
+
+  async function handleDuplicate(id: string) {
+    const result = await duplicateMutation.mutateAsync(id)
+    void navigate({ to: '/quotes/$id', params: { id: result.id } })
+  }
 
   if (isLoading) return <p style={{ color: 'var(--color-neutral-600)' }}>Carregando...</p>
   if (error) return <p style={{ color: 'var(--color-danger)' }}>Erro ao carregar orçamentos.</p>
@@ -78,13 +85,13 @@ export function QuotesListPage() {
                 </td>
               </tr>
             )}
-            {quotes?.map((q) => {
+            {quotes?.map((q, i) => {
               const colors = STATUS_COLOR[q.status] ?? { bg: 'var(--color-neutral-100)', text: 'var(--color-neutral-600)' }
               const showActions = canShowActions(q.status)
               const isMutating = updateStatusMutation.isPending
 
               return (
-                <tr key={q.id} style={{ borderTop: '1px solid var(--color-neutral-300)' }}>
+                <tr key={q.id} style={{ borderTop: '1px solid var(--color-neutral-300)', background: i % 2 === 1 ? 'var(--color-neutral-100)' : 'transparent' }}>
                   <td style={tdStyle}>{q.client.name}</td>
                   <td style={tdStyle}>
                     <span
@@ -115,6 +122,15 @@ export function QuotesListPage() {
                       <Link to="/quotes/$id" params={{ id: q.id }}>
                         <button style={btnSecondary}>Ver</button>
                       </Link>
+                      {(user?.role === 'ADMIN' || user?.role === 'SALES') && (
+                        <button
+                          onClick={() => void handleDuplicate(q.id)}
+                          disabled={duplicateMutation.isPending}
+                          style={{ ...btnSecondary, opacity: duplicateMutation.isPending ? 0.6 : 1 }}
+                        >
+                          Duplicar
+                        </button>
+                      )}
                       {showActions && (
                         <>
                           {q.activeVersion && (

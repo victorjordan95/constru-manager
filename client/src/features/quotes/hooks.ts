@@ -6,6 +6,7 @@ import {
   addVersion,
   updateStatus,
   acceptQuote,
+  duplicateQuote,
 } from './api'
 import type {
   CreateQuotePayload,
@@ -13,6 +14,7 @@ import type {
   UpdateStatusPayload,
   AcceptQuotePayload,
 } from './types'
+
 
 export function useQuotes() {
   return useQuery({ queryKey: ['quotes'], queryFn: listQuotes })
@@ -67,5 +69,13 @@ export function useAcceptQuote() {
       void qc.invalidateQueries({ queryKey: ['quotes', id] })
       void qc.invalidateQueries({ queryKey: ['quotes'] })
     },
+  })
+}
+
+export function useDuplicateQuote() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => duplicateQuote(id),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['quotes'] }) },
   })
 }

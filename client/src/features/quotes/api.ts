@@ -37,3 +37,8 @@ export async function acceptQuote(id: string, payload: AcceptQuotePayload): Prom
   const { data } = await api.post<Quote>(`/quotes/${id}/accept`, payload)
   return data
 }
+
+export async function duplicateQuote(id: string): Promise<{ id: string }> {
+  const { data } = await api.post<{ id: string }>(`/quotes/${id}/duplicate`)
+  return data
+}

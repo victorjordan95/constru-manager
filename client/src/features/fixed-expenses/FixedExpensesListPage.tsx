@@ -61,19 +61,20 @@ export function FixedExpensesListPage() {
       {expenses?.length === 0 ? (
         <p style={{ color: 'var(--color-neutral-600)' }}>Nenhuma despesa fixa cadastrada.</p>
       ) : (
+        <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-neutral-300)', borderRadius: 8, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: 'var(--color-neutral-200)', textAlign: 'left' }}>
+            <tr style={{ background: 'var(--color-primary-bg)', textAlign: 'left' }}>
               {['Nome', 'Valor', 'Categoria', 'Dia Venc.', 'Ações'].map((h) => (
-                <th key={h} style={{ padding: '8px 12px', fontSize: '0.85rem' }}>
+                <th key={h} style={{ padding: '8px 12px', fontSize: '0.85rem', color: 'var(--color-primary)' }}>
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {expenses?.map((e) => (
-              <tr key={e.id} style={{ borderBottom: '1px solid var(--color-neutral-200)' }}>
+            {expenses?.map((e, i) => (
+              <tr key={e.id} style={{ borderTop: '1px solid var(--color-neutral-300)', background: i % 2 === 1 ? 'var(--color-neutral-100)' : 'transparent' }}>
                 <td style={{ padding: '8px 12px' }}>{e.name}</td>
                 <td style={{ padding: '8px 12px' }}>{formatCurrency(e.amount)}</td>
                 <td style={{ padding: '8px 12px', color: 'var(--color-neutral-600)' }}>
@@ -110,6 +111,7 @@ export function FixedExpensesListPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );
