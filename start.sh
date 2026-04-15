@@ -132,9 +132,42 @@ echo ""
 echo -e "  Frontend  →  ${CYAN}http://localhost:5173${RESET}"
 echo -e "  Backend   →  ${CYAN}http://localhost:3000${RESET}"
 echo ""
-echo -e "  Credenciais padrão:"
-echo -e "    ADMIN  →  admin@constru.dev   / admin123"
-echo -e "    SALES  →  vendas@constru.dev  / sales123"
+
+# Busca usuários ativos do banco e exibe
+echo -e "  ${BOLD}Usuários de teste:${RESET}"
+
+set +e
+USERS_RAW=$(cd "$SERVER" && node -e "
+const { PrismaClient } = require('@prisma/client');
+const p = new PrismaClient();
+p.user.findMany({
+  where: { isActive: true },
+  select: { email: true, role: true },
+  orderBy: { role: 'asc' }
+})
+.then(users => {
+  users.forEach(u => process.stdout.write(u.role + '\t' + u.email + '\n'));
+  return p.\$disconnect();
+})
+.catch(() => process.exit(1));
+" 2>/dev/null)
+set -e
+
+# Mapa de senhas padrão do seed
+declare -A SEED_PASSWORDS
+SEED_PASSWORDS["admin@constru.dev"]="admin123"
+SEED_PASSWORDS["vendas@constru.dev"]="sales123"
+SEED_PASSWORDS["financeiro@constru.dev"]="finance123"
+
+if [ -n "$USERS_RAW" ]; then
+  while IFS=$'\t' read -r role email; do
+    senha="${SEED_PASSWORDS[$email]:-"(senha customizada)"}"
+    printf "    ${CYAN}%-8s${RESET} →  %-30s / %s\n" "$role" "$email" "$senha"
+  done <<< "$USERS_RAW"
+else
+  echo -e "    ${YELLOW}Não foi possível listar usuários${RESET}"
+fi
+
 echo ""
 echo -e "  Logs:"
 echo -e "    Server  →  server.log"
