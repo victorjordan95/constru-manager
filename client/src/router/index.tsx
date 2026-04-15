@@ -18,6 +18,8 @@ import { QuoteVersionFormPage } from '@/features/quotes/QuoteVersionFormPage'
 import { FixedExpensesListPage } from '@/features/fixed-expenses/FixedExpensesListPage'
 import { FixedExpenseFormPage } from '@/features/fixed-expenses/FixedExpenseFormPage'
 import { FinanceDashboardPage } from '@/features/finance/FinanceDashboardPage'
+import { UsersListPage } from '@/features/users/UsersListPage'
+import { UserFormPage } from '@/features/users/UserFormPage'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -163,6 +165,18 @@ const financeDashboardRoute = createRoute({
   component: FinanceDashboardPage,
 })
 
+const usersRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/users',
+  component: UsersListPage,
+})
+
+const userCreateRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/users/new',
+  component: UserFormPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authenticatedRoute.addChildren([
@@ -184,6 +198,8 @@ const routeTree = rootRoute.addChildren([
     fixedExpenseCreateRoute,
     fixedExpenseEditRoute,
     financeDashboardRoute,
+    usersRoute,
+    userCreateRoute,
   ]),
 ])
 

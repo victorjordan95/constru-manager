@@ -70,6 +70,13 @@ export function AppLayout() {
               </Link>
             </li>
           )}
+          {user?.role === 'ADMIN' && (
+            <li>
+              <Link to="/users" style={linkStyle}>
+                Usuários
+              </Link>
+            </li>
+          )}
           {(user?.role === 'SALES' || user?.role === 'ADMIN') && (
             <li>
               <Link to="/quotes" style={linkStyle}>
