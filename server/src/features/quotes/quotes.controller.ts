@@ -6,6 +6,7 @@ import {
   addVersion,
   updateStatus,
   acceptQuote,
+  duplicateQuote,
 } from './quotes.service'
 import {
   createQuoteSchema,
@@ -106,6 +107,24 @@ export async function handleUpdateStatus(
       return
     }
     res.json(result.quote)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function handleDuplicateQuote(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const result = await duplicateQuote(req.params.id as string)
+    if ('error' in result) {
+      const status = result.error === 'NOT_FOUND' ? 404 : 400
+      res.status(status).json({ error: result.error, code: result.error })
+      return
+    }
+    res.status(201).json({ id: result.id })
   } catch (err) {
     next(err)
   }

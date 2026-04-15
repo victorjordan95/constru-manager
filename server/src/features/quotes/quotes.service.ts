@@ -242,6 +242,48 @@ export async function updateStatus(id: string, data: UpdateStatusInput) {
   return { quote }
 }
 
+export async function duplicateQuote(id: string) {
+  const quote = await prisma.quote.findUnique({
+    where: { id },
+    include: {
+      activeVersion: { include: { items: true } },
+    },
+  })
+  if (!quote) return { error: 'NOT_FOUND' as const }
+  if (!quote.activeVersion) return { error: 'NO_ACTIVE_VERSION' as const }
+
+  const sourceVersion = quote.activeVersion
+
+  const newQuote = await prisma.$transaction(async (tx) => {
+    const created = await tx.quote.create({ data: { clientId: quote.clientId } })
+    const version = await tx.quoteVersion.create({
+      data: {
+        quoteId: created.id,
+        version: 1,
+        subtotal: sourceVersion.subtotal,
+        laborCost: sourceVersion.laborCost,
+        discount: sourceVersion.discount,
+        total: sourceVersion.total,
+        items: {
+          create: sourceVersion.items.map((item) => ({
+            productId: item.productId,
+            kitId: item.kitId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            lineTotal: item.lineTotal,
+          })),
+        },
+      },
+    })
+    return tx.quote.update({
+      where: { id: created.id },
+      data: { activeVersionId: version.id },
+    })
+  })
+
+  return { id: newQuote.id }
+}
+
 export async function acceptQuote(id: string, data: AcceptQuoteInput) {
   const quote = await prisma.quote.findUnique({
     where: { id },
