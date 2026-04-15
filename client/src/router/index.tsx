@@ -169,12 +169,20 @@ const usersRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/users',
   component: UsersListPage,
+  beforeLoad: () => {
+    const { user } = useAuthStore.getState()
+    if (user?.role !== 'ADMIN') throw redirect({ to: '/' })
+  },
 })
 
 const userCreateRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/users/new',
   component: UserFormPage,
+  beforeLoad: () => {
+    const { user } = useAuthStore.getState()
+    if (user?.role !== 'ADMIN') throw redirect({ to: '/' })
+  },
 })
 
 const routeTree = rootRoute.addChildren([

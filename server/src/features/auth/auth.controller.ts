@@ -132,7 +132,7 @@ export async function register(
     const passwordHash = await hashPassword(password);
     const user = await prisma.user.create({
       data: { email, passwordHash, role },
-      select: { id: true, email: true, role: true, createdAt: true },
+      select: { id: true, email: true, role: true, isActive: true, createdAt: true },
     });
 
     res.status(201).json(user);

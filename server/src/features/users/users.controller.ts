@@ -46,6 +46,11 @@ export async function handleDeactivateUser(
       return;
     }
 
+    if (!existing.isActive) {
+      res.status(400).json({ error: 'User is already inactive', code: 'ALREADY_INACTIVE' });
+      return;
+    }
+
     const updated = await prisma.user.update({
       where: { id: targetId },
       data: { isActive: false },
