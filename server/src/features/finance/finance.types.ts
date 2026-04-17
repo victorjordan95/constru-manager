@@ -17,3 +17,28 @@ export const cashflowQuerySchema = z.object({
 });
 
 export type CashflowQuery = z.infer<typeof cashflowQuerySchema>;
+
+export const dreQuerySchema = z.object({
+  month: z.coerce.number().int().min(1).max(12),
+  year:  z.coerce.number().int().min(2000).max(2100),
+});
+
+export type DREQuery = z.infer<typeof dreQuerySchema>;
+
+export interface DRECategoryRow {
+  category: string | null;
+  previsto:  number;
+  realizado: number;
+}
+
+export interface DREResponse {
+  month:              number;
+  year:               number;
+  receitaPrevista:    number;
+  receitaRealizada:   number;
+  despesaPrevista:    number;
+  despesaRealizada:   number;
+  resultadoPrevisto:  number;
+  resultadoRealizado: number;
+  expensesByCategory: DRECategoryRow[];
+}

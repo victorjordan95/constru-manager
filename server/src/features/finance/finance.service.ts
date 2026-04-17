@@ -1,5 +1,6 @@
 import { TransactionType } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
+import type { DREResponse } from './finance.types';
 
 // ─── Pure helper ──────────────────────────────────────────────────────────────
 
@@ -237,4 +238,75 @@ export async function payExpenseLog(id: string) {
 
   const updated = await prisma.fixedExpenseLog.findUnique({ where: { id } });
   return { log: updated };
+}
+
+// ─── DRE ──────────────────────────────────────────────────────────────────────
+
+export async function getDRE(month: number, year: number): Promise<DREResponse> {
+  const monthStart = new Date(year, month - 1, 1);
+  const monthEnd   = new Date(year, month,     1);
+
+  // Receita prevista: todas as parcelas com dueDate no mês (qualquer status)
+  const installments = await prisma.installment.findMany({
+    where: { dueDate: { gte: monthStart, lt: monthEnd } },
+    select: { amount: true },
+  });
+  const receitaPrevista = installments.reduce((s, i) => s + i.amount, 0);
+
+  // Despesas previstas: FixedExpenseLogs do mês com valores da despesa fixa
+  const expenseLogs = await prisma.fixedExpenseLog.findMany({
+    where: { month, year },
+    include: { fixedExpense: { select: { amount: true, category: true } } },
+  });
+  const despesaPrevista = expenseLogs.reduce((s, l) => s + l.fixedExpense.amount, 0);
+
+  // Receita realizada: CashTransactions INCOME no mês
+  const incomeTransactions = await prisma.cashTransaction.findMany({
+    where: { type: 'INCOME', date: { gte: monthStart, lt: monthEnd } },
+    select: { amount: true },
+  });
+  const receitaRealizada = incomeTransactions.reduce((s, t) => s + t.amount, 0);
+
+  // Despesas realizadas: CashTransactions EXPENSE no mês, com categoria via join
+  const expenseTransactions = await prisma.cashTransaction.findMany({
+    where: { type: 'EXPENSE', date: { gte: monthStart, lt: monthEnd } },
+    include: {
+      fixedExpenseLog: { include: { fixedExpense: { select: { category: true } } } },
+    },
+  });
+  const despesaRealizada = expenseTransactions.reduce((s, t) => s + t.amount, 0);
+
+  // Agrupar previsto por categoria
+  const prevMap = new Map<string | null, number>();
+  for (const log of expenseLogs) {
+    const cat = log.fixedExpense.category ?? null;
+    prevMap.set(cat, (prevMap.get(cat) ?? 0) + log.fixedExpense.amount);
+  }
+
+  // Agrupar realizado por categoria
+  const realMap = new Map<string | null, number>();
+  for (const tx of expenseTransactions) {
+    const cat = tx.fixedExpenseLog?.fixedExpense.category ?? null;
+    realMap.set(cat, (realMap.get(cat) ?? 0) + tx.amount);
+  }
+
+  // Unir todas as categorias presentes
+  const allCategories = new Set([...prevMap.keys(), ...realMap.keys()]);
+  const expensesByCategory = [...allCategories].map((category) => ({
+    category,
+    previsto:  prevMap.get(category)  ?? 0,
+    realizado: realMap.get(category) ?? 0,
+  }));
+
+  return {
+    month,
+    year,
+    receitaPrevista,
+    receitaRealizada,
+    despesaPrevista,
+    despesaRealizada,
+    resultadoPrevisto:  receitaPrevista  - despesaPrevista,
+    resultadoRealizado: receitaRealizada - despesaRealizada,
+    expensesByCategory,
+  };
 }
