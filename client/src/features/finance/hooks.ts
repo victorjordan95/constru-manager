@@ -6,6 +6,7 @@ import {
   payExpenseLog,
   getCashflow,
   getOverdueInstallments,
+  getDRE,
 } from './api';
 
 export function useFinanceSummary(month: number, year: number) {
@@ -41,7 +42,10 @@ export function usePayInstallment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => payInstallment(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['finance'] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['finance'] });
+      void qc.invalidateQueries({ queryKey: ['quotes'] });
+    },
   });
 }
 
@@ -50,5 +54,12 @@ export function usePayExpenseLog() {
   return useMutation({
     mutationFn: (id: string) => payExpenseLog(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['finance'] }),
+  });
+}
+
+export function useFinanceDRE(month: number, year: number) {
+  return useQuery({
+    queryKey: ['finance', 'dre', month, year],
+    queryFn: () => getDRE(month, year),
   });
 }

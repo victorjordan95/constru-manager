@@ -46,3 +46,21 @@ export interface FinanceSummary {
   installments: InstallmentSummaryItem[];
   expenseLogs: ExpenseLogSummaryItem[];
 }
+
+export interface DRECategoryRow {
+  category: string | null;
+  previsto:  number;
+  realizado: number;
+}
+
+export interface DREResponse {
+  month:              number;
+  year:               number;
+  receitaPrevista:    number;
+  receitaRealizada:   number;
+  despesaPrevista:    number;
+  despesaRealizada:   number;
+  resultadoPrevisto:  number;
+  resultadoRealizado: number;
+  expensesByCategory: DRECategoryRow[];
+}
