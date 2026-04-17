@@ -93,6 +93,13 @@ export function AppLayout() {
           )}
           {(user?.role === 'ADMIN' || user?.role === 'FINANCE') && (
             <li>
+              <Link to="/dre" style={linkStyle}>
+                DRE
+              </Link>
+            </li>
+          )}
+          {(user?.role === 'ADMIN' || user?.role === 'FINANCE') && (
+            <li>
               <Link to="/fixed-expenses" style={linkStyle}>
                 Despesas Fixas
               </Link>

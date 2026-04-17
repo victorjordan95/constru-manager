@@ -18,6 +18,7 @@ import { QuoteVersionFormPage } from '@/features/quotes/QuoteVersionFormPage'
 import { FixedExpensesListPage } from '@/features/fixed-expenses/FixedExpensesListPage'
 import { FixedExpenseFormPage } from '@/features/fixed-expenses/FixedExpenseFormPage'
 import { FinanceDashboardPage } from '@/features/finance/FinanceDashboardPage'
+import { DrePage } from '@/features/finance/DrePage'
 import { UsersListPage } from '@/features/users/UsersListPage'
 import { UserFormPage } from '@/features/users/UserFormPage'
 
@@ -165,6 +166,12 @@ const financeDashboardRoute = createRoute({
   component: FinanceDashboardPage,
 })
 
+const dreRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/dre',
+  component: DrePage,
+})
+
 const usersRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/users',
@@ -206,6 +213,7 @@ const routeTree = rootRoute.addChildren([
     fixedExpenseCreateRoute,
     fixedExpenseEditRoute,
     financeDashboardRoute,
+    dreRoute,
     usersRoute,
     userCreateRoute,
   ]),
