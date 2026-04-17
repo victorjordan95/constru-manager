@@ -7,8 +7,9 @@ import {
   payExpenseLog,
   getCashflow,
   getOverdueInstallments,
+  getDRE,
 } from './finance.service';
-import { summaryQuerySchema, updateBalanceSchema, cashflowQuerySchema } from './finance.types';
+import { summaryQuerySchema, updateBalanceSchema, cashflowQuerySchema, dreQuerySchema } from './finance.types';
 
 export async function handleGetBalance(
   _req: Request,
@@ -127,6 +128,24 @@ export async function handlePayExpenseLog(
       return;
     }
     res.json(result.log);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleGetDRE(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const parsed = dreQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid query params', code: 'VALIDATION_ERROR' });
+      return;
+    }
+    const data = await getDRE(parsed.data.month, parsed.data.year);
+    res.json(data);
   } catch (err) {
     next(err);
   }

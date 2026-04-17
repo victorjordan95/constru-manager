@@ -9,6 +9,7 @@ import {
   handlePayExpenseLog,
   handleGetCashflow,
   handleGetOverdue,
+  handleGetDRE,
 } from './finance.controller';
 
 export const financeRouter = Router();
@@ -20,5 +21,6 @@ financeRouter.put('/balance', handleUpdateBalance);
 financeRouter.get('/summary', handleGetSummary);
 financeRouter.get('/cashflow', handleGetCashflow);
 financeRouter.get('/overdue', handleGetOverdue);
+financeRouter.get('/dre', handleGetDRE);
 financeRouter.patch('/installments/:id/pay', handlePayInstallment);
 financeRouter.patch('/expense-logs/:id/pay', handlePayExpenseLog);
