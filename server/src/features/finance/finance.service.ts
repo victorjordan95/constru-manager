@@ -259,11 +259,11 @@ export async function getDRE(month: number, year: number): Promise<DREResponse> 
   // Parallelize the four independent data queries
   const [installments, expenseLogs, incomeTransactions, expenseTransactions] = await Promise.all([
     prisma.installment.findMany({
-      where: { dueDate: { gte: monthStart, lt: monthEnd } },
+      where: { dueDate: { gte: monthStart, lt: monthEnd }, status: { not: 'PAID' } },
       select: { amount: true },
     }),
     prisma.fixedExpenseLog.findMany({
-      where: { month, year },
+      where: { month, year, status: 'PENDING' },
       include: { fixedExpense: { select: { amount: true, category: true } } },
     }),
     prisma.cashTransaction.findMany({
