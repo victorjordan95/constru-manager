@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { CSSProperties } from 'react'
 import { useFinanceDRE } from './hooks'
 import { formatCurrency } from '@/lib/format'
 
@@ -11,7 +12,7 @@ export function DrePage() {
   const now = new Date()
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear]   = useState(now.getFullYear())
-  const { data, isLoading } = useFinanceDRE(month, year)
+  const { data, isLoading, isError } = useFinanceDRE(month, year)
 
   function prevMonth() {
     if (month === 1) { setMonth(12); setYear((y) => y - 1) }
@@ -43,8 +44,10 @@ export function DrePage() {
         </div>
       </div>
 
-      {isLoading || !data ? (
+      {isLoading ? (
         <p style={{ color: 'var(--color-neutral-600)' }}>Carregando...</p>
+      ) : isError || !data ? (
+        <p style={{ color: 'var(--color-danger)' }}>Erro ao carregar o DRE.</p>
       ) : (
         <div style={{
           background: 'var(--color-surface)',
@@ -82,8 +85,8 @@ export function DrePage() {
                   </td>
                 </tr>
               )}
-              {data.expensesByCategory.map((row, i) => (
-                <tr key={i} style={{ borderTop: '1px solid var(--color-neutral-200)' }}>
+              {data.expensesByCategory.map((row) => (
+                <tr key={row.category ?? '__null__'} style={{ borderTop: '1px solid var(--color-neutral-200)' }}>
                   <td style={{ ...tdLabel, paddingLeft: 28 }}>{row.category ?? 'Outros'}</td>
                   <td style={tdVal}>{formatCurrency(row.previsto)}</td>
                   <td style={tdVal}>{formatCurrency(row.realizado)}</td>
@@ -113,7 +116,7 @@ export function DrePage() {
   )
 }
 
-const navBtnStyle: React.CSSProperties = {
+const navBtnStyle: CSSProperties = {
   background: 'var(--color-primary-bg)',
   color: 'var(--color-primary)',
   border: 'none',
@@ -124,7 +127,7 @@ const navBtnStyle: React.CSSProperties = {
   fontSize: '0.875rem',
 }
 
-const thStyle: React.CSSProperties = {
+const thStyle: CSSProperties = {
   padding: '10px 16px',
   textAlign: 'right',
   fontSize: '0.875rem',
@@ -132,7 +135,7 @@ const thStyle: React.CSSProperties = {
   color: 'var(--color-primary)',
 }
 
-const sectionLabelStyle: React.CSSProperties = {
+const sectionLabelStyle: CSSProperties = {
   padding: '6px 16px',
   fontWeight: 700,
   fontSize: '0.75rem',
@@ -140,12 +143,12 @@ const sectionLabelStyle: React.CSSProperties = {
   color: 'var(--color-neutral-600)',
 }
 
-const tdLabel: React.CSSProperties = {
+const tdLabel: CSSProperties = {
   padding: '8px 16px',
   fontSize: '0.875rem',
 }
 
-const tdVal: React.CSSProperties = {
+const tdVal: CSSProperties = {
   padding: '8px 16px',
   textAlign: 'right',
   fontSize: '0.875rem',
