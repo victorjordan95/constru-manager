@@ -246,34 +246,41 @@ export async function getDRE(month: number, year: number): Promise<DREResponse> 
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd   = new Date(year, month,     1);
 
-  // Receita prevista: todas as parcelas com dueDate no mês (qualquer status)
-  const installments = await prisma.installment.findMany({
-    where: { dueDate: { gte: monthStart, lt: monthEnd } },
-    select: { amount: true },
-  });
-  const receitaPrevista = installments.reduce((s, i) => s + i.amount, 0);
+  // Auto-upsert FixedExpenseLogs for all active expenses this month (idempotent)
+  const activeExpenses = await prisma.fixedExpense.findMany({ where: { isActive: true } });
+  for (const expense of activeExpenses) {
+    await prisma.fixedExpenseLog.upsert({
+      where: { fixedExpenseId_month_year: { fixedExpenseId: expense.id, month, year } },
+      create: { fixedExpenseId: expense.id, month, year, status: 'PENDING' },
+      update: {},
+    });
+  }
 
-  // Despesas previstas: FixedExpenseLogs do mês com valores da despesa fixa
-  const expenseLogs = await prisma.fixedExpenseLog.findMany({
-    where: { month, year },
-    include: { fixedExpense: { select: { amount: true, category: true } } },
-  });
-  const despesaPrevista = expenseLogs.reduce((s, l) => s + l.fixedExpense.amount, 0);
+  // Parallelize the four independent data queries
+  const [installments, expenseLogs, incomeTransactions, expenseTransactions] = await Promise.all([
+    prisma.installment.findMany({
+      where: { dueDate: { gte: monthStart, lt: monthEnd } },
+      select: { amount: true },
+    }),
+    prisma.fixedExpenseLog.findMany({
+      where: { month, year },
+      include: { fixedExpense: { select: { amount: true, category: true } } },
+    }),
+    prisma.cashTransaction.findMany({
+      where: { type: 'INCOME', date: { gte: monthStart, lt: monthEnd } },
+      select: { amount: true },
+    }),
+    prisma.cashTransaction.findMany({
+      where: { type: 'EXPENSE', date: { gte: monthStart, lt: monthEnd } },
+      include: {
+        fixedExpenseLog: { include: { fixedExpense: { select: { category: true } } } },
+      },
+    }),
+  ]);
 
-  // Receita realizada: CashTransactions INCOME no mês
-  const incomeTransactions = await prisma.cashTransaction.findMany({
-    where: { type: 'INCOME', date: { gte: monthStart, lt: monthEnd } },
-    select: { amount: true },
-  });
+  const receitaPrevista  = installments.reduce((s, i) => s + i.amount, 0);
+  const despesaPrevista  = expenseLogs.reduce((s, l) => s + l.fixedExpense.amount, 0);
   const receitaRealizada = incomeTransactions.reduce((s, t) => s + t.amount, 0);
-
-  // Despesas realizadas: CashTransactions EXPENSE no mês, com categoria via join
-  const expenseTransactions = await prisma.cashTransaction.findMany({
-    where: { type: 'EXPENSE', date: { gte: monthStart, lt: monthEnd } },
-    include: {
-      fixedExpenseLog: { include: { fixedExpense: { select: { category: true } } } },
-    },
-  });
   const despesaRealizada = expenseTransactions.reduce((s, t) => s + t.amount, 0);
 
   // Agrupar previsto por categoria
@@ -292,7 +299,9 @@ export async function getDRE(month: number, year: number): Promise<DREResponse> 
 
   // Unir todas as categorias presentes
   const allCategories = new Set([...prevMap.keys(), ...realMap.keys()]);
-  const expensesByCategory = [...allCategories].map((category) => ({
+  const expensesByCategory = [...allCategories]
+    .sort((a, b) => (a ?? '').localeCompare(b ?? ''))
+    .map((category) => ({
     category,
     previsto:  prevMap.get(category)  ?? 0,
     realizado: realMap.get(category) ?? 0,
