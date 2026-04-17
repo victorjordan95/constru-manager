@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useAcceptQuote } from './hooks'
 import { formatCurrency } from '@/lib/format'
 import { calculateInstallments } from '@/lib/installments'
+import { maskCurrency, parseCurrencyInput } from '@/lib/currencyInput'
 import type { InstallmentPayload } from './types'
 
 interface Props {
@@ -13,15 +14,12 @@ interface Props {
 export function AcceptQuoteModal({ quoteId, total, onClose }: Props) {
   const acceptMutation = useAcceptQuote()
   const [paymentType, setPaymentType] = useState<'LUMP_SUM' | 'INSTALLMENTS'>('LUMP_SUM')
-  const [downPaymentStr, setDownPaymentStr] = useState('0')
+  const [downPaymentStr, setDownPaymentStr] = useState('')
   const [installmentCount, setInstallmentCount] = useState(1)
   const [firstDate, setFirstDate] = useState('')
   const [serverError, setServerError] = useState<string | null>(null)
 
-  const downPaymentCents = useMemo(() => {
-    const v = parseFloat(downPaymentStr || '0')
-    return Math.round(isNaN(v) ? 0 : v * 100)
-  }, [downPaymentStr])
+  const downPaymentCents = useMemo(() => parseCurrencyInput(downPaymentStr), [downPaymentStr])
 
   const remaining = Math.max(0, total - downPaymentCents)
 
@@ -172,13 +170,11 @@ export function AcceptQuoteModal({ quoteId, total, onClose }: Props) {
               Entrada (R$)
             </span>
             <input
-              type="number"
-              min="0"
-              step="0.01"
+              inputMode="numeric"
               value={downPaymentStr}
-              onChange={(e) => setDownPaymentStr(e.target.value)}
-              onFocus={selectOnFocus}
+              onChange={(e) => setDownPaymentStr(maskCurrency(e.target.value))}
               style={inputStyle}
+              placeholder="0,00"
             />
           </label>
 

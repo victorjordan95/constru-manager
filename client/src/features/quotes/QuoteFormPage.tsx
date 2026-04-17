@@ -5,6 +5,7 @@ import { useClients } from '@/features/clients/hooks'
 import { useProducts } from '@/features/products/hooks'
 import { useKits } from '@/features/kits/hooks'
 import { formatCurrency } from '@/lib/format'
+import { maskCurrency, parseCurrencyInput } from '@/lib/currencyInput'
 import type { QuoteItemPayload } from './types'
 
 type ItemType = 'product' | 'kit'
@@ -35,8 +36,8 @@ export function QuoteFormPage() {
   const [clientId, setClientId] = useState('')
   const [items, setItems] = useState<ItemRow[]>([emptyRow(0)])
   const [nextKey, setNextKey] = useState(1)
-  const [laborCostStr, setLaborCostStr] = useState('0')
-  const [discountStr, setDiscountStr] = useState('0')
+  const [laborCostStr, setLaborCostStr] = useState('')
+  const [discountStr, setDiscountStr] = useState('')
   const [serverError, setServerError] = useState<string | null>(null)
 
   const productPriceMap = useMemo(
@@ -49,8 +50,8 @@ export function QuoteFormPage() {
     [kits],
   )
 
-  const laborCostCents = Math.round(parseFloat(laborCostStr || '0') * 100)
-  const discountCents = Math.round(parseFloat(discountStr || '0') * 100)
+  const laborCostCents = parseCurrencyInput(laborCostStr)
+  const discountCents = parseCurrencyInput(discountStr)
 
   const subtotal = useMemo(
     () =>
@@ -282,25 +283,21 @@ export function QuoteFormPage() {
           <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={labelTextStyle}>Mão de obra (R$)</span>
             <input
-              type="number"
-              min="0"
-              step="0.01"
+              inputMode="numeric"
               value={laborCostStr}
-              onChange={(e) => setLaborCostStr(e.target.value)}
-              onFocus={selectOnFocus}
+              onChange={(e) => setLaborCostStr(maskCurrency(e.target.value))}
               style={inputStyle}
+              placeholder="0,00"
             />
           </label>
           <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={labelTextStyle}>Desconto (R$)</span>
             <input
-              type="number"
-              min="0"
-              step="0.01"
+              inputMode="numeric"
               value={discountStr}
-              onChange={(e) => setDiscountStr(e.target.value)}
-              onFocus={selectOnFocus}
+              onChange={(e) => setDiscountStr(maskCurrency(e.target.value))}
               style={inputStyle}
+              placeholder="0,00"
             />
           </label>
         </div>

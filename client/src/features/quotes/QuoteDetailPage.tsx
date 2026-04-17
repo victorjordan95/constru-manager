@@ -40,17 +40,12 @@ export function QuoteDetailPage() {
   return (
     <div style={{ maxWidth: 800 }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)' }}>
-        <div>
-          <Link to="/quotes" style={{ color: 'var(--color-primary)', fontSize: '0.875rem', textDecoration: 'none' }}>
-            ← Orçamentos
-          </Link>
-          <h1 style={{ fontSize: '1.5rem', marginTop: 4 }}>{quote.client.name}</h1>
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-600)', marginTop: 2 }}>
-            Criado em {new Date(quote.createdAt).toLocaleDateString('pt-BR')}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+      <div style={{ marginBottom: 'var(--space-3)' }}>
+        <Link to="/quotes" style={{ color: 'var(--color-primary)', fontSize: '0.875rem', textDecoration: 'none' }}>
+          ← Orçamentos
+        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+          <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{quote.client.name}</h1>
           <span
             style={{
               background: colors.bg,
@@ -59,10 +54,16 @@ export function QuoteDetailPage() {
               borderRadius: 12,
               fontSize: '0.875rem',
               fontWeight: 600,
+              flexShrink: 0,
             }}
           >
             {STATUS_LABEL[quote.status] ?? quote.status}
           </span>
+        </div>
+        <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-600)', marginTop: 2 }}>
+          Criado em {new Date(quote.createdAt).toLocaleDateString('pt-BR')}
+        </p>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 'var(--space-2)' }}>
           {canChangeStatus && (
             <>
               {quote.status !== 'PENDING_REVIEW' && (

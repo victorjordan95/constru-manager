@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { useFixedExpense, useCreateFixedExpense, useUpdateFixedExpense } from './hooks';
+import { maskCurrency, parseCurrencyInput, centsToMasked } from '@/lib/currencyInput';
 
 type FormState = {
   name: string;
@@ -29,7 +30,7 @@ export function FixedExpenseFormPage() {
     if (existing) {
       setForm({
         name: existing.name,
-        amountBrl: (existing.amount / 100).toFixed(2),
+        amountBrl: centsToMasked(existing.amount),
         dueDay: String(existing.dueDay),
         category: existing.category ?? '',
       });
@@ -46,7 +47,7 @@ export function FixedExpenseFormPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setServerError(null);
-    const amount = Math.round(parseFloat(form.amountBrl) * 100);
+    const amount = parseCurrencyInput(form.amountBrl);
     const dueDay = parseInt(form.dueDay, 10);
     if (isNaN(amount) || amount <= 0) {
       setServerError('Valor inválido.');
@@ -111,14 +112,12 @@ export function FixedExpenseFormPage() {
           <label htmlFor="fe-amount" style={labelStyle}>Valor (R$) *</label>
           <input
             id="fe-amount"
+            inputMode="numeric"
             style={inputStyle}
-            type="number"
-            step="0.01"
-            min="0.01"
             value={form.amountBrl}
-            onFocus={(e) => e.target.select()}
-            onChange={(e) => set('amountBrl', e.target.value)}
+            onChange={(e) => set('amountBrl', maskCurrency(e.target.value))}
             required
+            placeholder="0,00"
           />
         </div>
         <div style={fieldStyle}>

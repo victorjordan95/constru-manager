@@ -3,6 +3,7 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { useProduct, useCreateProduct, useUpdateProduct } from './hooks'
 import type { CreateProductPayload } from './types'
 import { formatCurrency } from '@/lib/format'
+import { maskCurrency, parseCurrencyInput, centsToMasked, maskDecimal, parseDecimalInput } from '@/lib/currencyInput'
 
 type FormState = {
   name: string
@@ -37,8 +38,8 @@ export function ProductFormPage() {
     if (existing) {
       setForm({
         name: existing.name,
-        basePriceBrl: (existing.basePrice / 100).toFixed(2),
-        markupPercent: String(existing.markupPercent),
+        basePriceBrl: centsToMasked(existing.basePrice),
+        markupPercent: maskDecimal(String(existing.markupPercent)),
         unit: existing.unit ?? '',
         minStock: String(existing.minStock),
       })
@@ -48,26 +49,22 @@ export function ProductFormPage() {
     }
   }, [existing, isEdit])
 
-  // Preview finalPrice client-side: round(base * 100 * (1 + markup/100))
-  const basePriceRaw = parseFloat(form.basePriceBrl)
-  const markupNum = parseFloat(form.markupPercent)
-  const previewFinalPrice =
-    isNaN(basePriceRaw) || isNaN(markupNum)
-      ? 0
-      : Math.round(basePriceRaw * 100 * (1 + markupNum / 100))
+  const basePriceCents = parseCurrencyInput(form.basePriceBrl)
+  const markupNum = parseDecimalInput(form.markupPercent)
+  const previewFinalPrice = Math.round(basePriceCents * (1 + markupNum / 100))
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setServerError(null)
 
-    const basePrice = Math.round(parseFloat(form.basePriceBrl) * 100)
-    const markupPercent = parseFloat(form.markupPercent)
+    const basePrice = parseCurrencyInput(form.basePriceBrl)
+    const markupPercent = parseDecimalInput(form.markupPercent)
 
-    if (isNaN(basePrice) || basePrice < 0) {
+    if (basePrice < 0) {
       setServerError('Custo inválido.')
       return
     }
-    if (isNaN(markupPercent) || markupPercent < 0) {
+    if (markupPercent < 0) {
       setServerError('Markup inválido.')
       return
     }
@@ -135,25 +132,21 @@ export function ProductFormPage() {
         <label style={labelStyle}>
           <span style={labelTextStyle}>Custo (R$) *</span>
           <input
-            type="number"
-            step="0.01"
-            min="0"
+            inputMode="numeric"
             style={inputStyle}
             value={form.basePriceBrl}
-            onChange={(e) => setForm({ ...form, basePriceBrl: e.target.value })}
+            onChange={(e) => setForm({ ...form, basePriceBrl: maskCurrency(e.target.value) })}
             required
-            placeholder="0.00"
+            placeholder="0,00"
           />
         </label>
         <label style={labelStyle}>
           <span style={labelTextStyle}>Markup (%) *</span>
           <input
-            type="number"
-            step="0.01"
-            min="0"
+            inputMode="decimal"
             style={inputStyle}
             value={form.markupPercent}
-            onChange={(e) => setForm({ ...form, markupPercent: e.target.value })}
+            onChange={(e) => setForm({ ...form, markupPercent: maskDecimal(e.target.value) })}
             required
           />
         </label>
