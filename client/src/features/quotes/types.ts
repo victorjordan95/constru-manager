@@ -52,7 +52,8 @@ export interface Installment {
   id: string
   dueDate: string
   amount: number
-  isPaid: boolean
+  status: 'PENDING' | 'PAID' | 'OVERDUE'
+  paidAt: string | null
 }
 
 export interface Sale {

@@ -9,9 +9,9 @@ export function generateQuotePDF(quote: Quote): void {
   const version = quote.activeVersion!;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
-  const margin = 20;
+  const margin = 25;
   const contentW = pageW - margin * 2;
-  let y = margin;
+  let y = margin + 5;
 
   // ── Header ──────────────────────────────────────────────────────────────────
   doc.setFont('helvetica', 'bold');
@@ -138,8 +138,8 @@ export function generateQuotePDF(quote: Quote): void {
   doc.setTextColor(160);
   doc.setDrawColor(220);
   doc.setLineWidth(0.2);
-  doc.line(margin, pageH - 15, pageW - margin, pageH - 15);
-  doc.text(`Constru Manager · Documento gerado automaticamente em ${today}`, pageW / 2, pageH - 10, { align: 'center' });
+  doc.line(margin, pageH - 18, pageW - margin, pageH - 18);
+  doc.text(`Constru Manager · Documento gerado automaticamente em ${today}`, pageW / 2, pageH - 13, { align: 'center' });
 
   // ── Save ────────────────────────────────────────────────────────────────────
   const clientSlug = quote.client.name.replace(/\s+/g, '-').toLowerCase();

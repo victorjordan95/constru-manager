@@ -274,10 +274,10 @@ export function QuoteDetailPage() {
                       style={{
                         paddingTop: 4,
                         textAlign: 'right',
-                        color: inst.isPaid ? 'var(--color-success)' : 'var(--color-neutral-600)',
+                        color: inst.status === 'PAID' ? 'var(--color-success)' : inst.status === 'OVERDUE' ? 'var(--color-danger)' : 'var(--color-neutral-600)',
                       }}
                     >
-                      {inst.isPaid ? 'Pago' : 'Pendente'}
+                      {inst.status === 'PAID' ? 'Pago' : inst.status === 'OVERDUE' ? 'Vencido' : 'Pendente'}
                     </td>
                   </tr>
                 ))}
