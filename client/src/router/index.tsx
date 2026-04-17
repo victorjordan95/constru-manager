@@ -170,6 +170,12 @@ const dreRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/dre',
   component: DrePage,
+  beforeLoad: () => {
+    const { user } = useAuthStore.getState()
+    if (user?.role !== 'ADMIN' && user?.role !== 'FINANCE') {
+      throw redirect({ to: '/' })
+    }
+  },
 })
 
 const usersRoute = createRoute({
