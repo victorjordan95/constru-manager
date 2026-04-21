@@ -83,7 +83,7 @@ export function FixedExpensesListPage() {
                 <td style={{ padding: '8px 12px' }}>Dia {e.dueDay}</td>
                 <td style={{ padding: '8px 12px' }}><div style={{ display: 'flex', gap: 6 }}>
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  <Link to={'/fixed-expenses/$id/edit' as any} params={{ id: e.id }}>
+                  <Link to={'/fixed-expenses/$id/edit' as any} params={{ id: e.id } as any}>
                     <button
                       style={{
                         ...btnStyle,

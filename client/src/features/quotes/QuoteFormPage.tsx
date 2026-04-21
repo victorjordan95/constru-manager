@@ -68,8 +68,6 @@ export function QuoteFormPage() {
 
   const total = subtotal + laborCostCents - discountCents
 
-  const selectOnFocus = (e: React.FocusEvent<HTMLInputElement>) => e.target.select()
-
   function addItem() {
     setItems((prev) => [...prev, emptyRow(nextKey)])
     setNextKey((k) => k + 1)

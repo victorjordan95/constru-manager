@@ -28,8 +28,6 @@ export function AcceptQuoteModal({ quoteId, total, onClose }: Props) {
     return calculateInstallments(remaining, installmentCount, firstDate)
   }, [paymentType, remaining, installmentCount, firstDate])
 
-  const selectOnFocus = (e: React.FocusEvent<HTMLInputElement>) => e.target.select()
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setServerError(null)
