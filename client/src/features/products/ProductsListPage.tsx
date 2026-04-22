@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useProducts, useDeleteProduct } from './hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { formatCurrency } from '@/lib/format'
+import { Tooltip } from '@/components/Tooltip'
 
 export function ProductsListPage() {
   const { data: products, isLoading, error } = useProducts()
@@ -88,7 +89,9 @@ export function ProductsListPage() {
                 }}>
                   {product.stockQty}
                   {product.minStock > 0 && product.stockQty < product.minStock && (
-                    <span title="Estoque abaixo do mínimo" style={{ marginLeft: 4, fontSize: '0.75rem' }}>⚠️</span>
+                    <Tooltip text="Estoque abaixo do mínimo">
+                      <span style={{ marginLeft: 4, fontSize: '0.75rem', cursor: 'default' }}>⚠️</span>
+                    </Tooltip>
                   )}
                 </td>
                 <td style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'right', color: 'var(--color-neutral-600)' }}>

@@ -3,6 +3,18 @@ export interface AuthUser {
   role: 'ADMIN' | 'SALES' | 'FINANCE'
 }
 
+export function isTokenExpired(token: string): boolean {
+  try {
+    const base64url = token.split('.')[1]
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
+    const payload = JSON.parse(atob(base64)) as { exp?: number }
+    if (!payload.exp) return false
+    return Date.now() >= payload.exp * 1000
+  } catch {
+    return true
+  }
+}
+
 export function decodeToken(token: string): AuthUser {
   try {
     const base64url = token.split('.')[1]

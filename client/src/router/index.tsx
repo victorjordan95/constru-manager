@@ -2,7 +2,7 @@ import { createRouter, createRoute, createRootRoute, Outlet, redirect } from '@t
 import axios from 'axios'
 import { config } from '@/config/env'
 import { useAuthStore } from '@/stores/authStore'
-import { decodeToken } from '@/lib/jwt'
+import { decodeToken, isTokenExpired } from '@/lib/jwt'
 import { AppLayout } from '@/layouts/AppLayout'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { ClientsListPage } from '@/features/clients/ClientsListPage'
@@ -36,17 +36,17 @@ const authenticatedRoute = createRoute({
   component: AppLayout,
   beforeLoad: async () => {
     const { accessToken } = useAuthStore.getState()
-    if (!accessToken) {
-      try {
-        const { data } = await axios.post<{ accessToken: string }>(
-          `${config.apiBaseUrl}/auth/refresh`,
-          {},
-          { withCredentials: true },
-        )
-        useAuthStore.getState().setAuth(data.accessToken, decodeToken(data.accessToken))
-      } catch {
-        throw redirect({ to: '/login' })
-      }
+    if (accessToken && !isTokenExpired(accessToken)) return
+    try {
+      const { data } = await axios.post<{ accessToken: string }>(
+        `${config.apiBaseUrl}/auth/refresh`,
+        {},
+        { withCredentials: true },
+      )
+      useAuthStore.getState().setAuth(data.accessToken, decodeToken(data.accessToken))
+    } catch {
+      useAuthStore.getState().clearAuth()
+      throw redirect({ to: '/login' })
     }
   },
 })
