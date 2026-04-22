@@ -6,9 +6,9 @@ export const createProductSchema = z.object({
   markupPercent: z.number().min(0).max(99999.99),
   unit: z.string().optional(),
   minStock: z.number().int().min(0).optional(),
+  stockQty: z.number().int().min(0).optional(),
 });
 
-// stockQty is managed by inventory (Phase 7), not editable here
 // finalPrice is auto-computed, not accepted from client
 export const updateProductSchema = createProductSchema.partial();
 

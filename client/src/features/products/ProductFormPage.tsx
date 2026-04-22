@@ -7,9 +7,10 @@ import { maskCurrency, parseCurrencyInput, centsToMasked, maskDecimal, parseDeci
 
 type FormState = {
   name: string
-  basePriceBrl: string   // user input in BRL, e.g. "125.50"
-  markupPercent: string  // user input, e.g. "20"
+  basePriceBrl: string
+  markupPercent: string
   unit: string
+  stockQty: string
   minStock: string
 }
 
@@ -18,6 +19,7 @@ const empty: FormState = {
   basePriceBrl: '',
   markupPercent: '0',
   unit: '',
+  stockQty: '0',
   minStock: '0',
 }
 
@@ -41,6 +43,7 @@ export function ProductFormPage() {
         basePriceBrl: centsToMasked(existing.basePrice),
         markupPercent: maskDecimal(String(existing.markupPercent)),
         unit: existing.unit ?? '',
+        stockQty: String(existing.stockQty),
         minStock: String(existing.minStock),
       })
     } else if (!isEdit) {
@@ -74,6 +77,7 @@ export function ProductFormPage() {
       basePrice,
       markupPercent,
       ...(form.unit && { unit: form.unit }),
+      ...(form.stockQty !== '' && { stockQty: parseInt(form.stockQty, 10) }),
       ...(form.minStock !== '' && { minStock: parseInt(form.minStock, 10) }),
     }
 
@@ -164,6 +168,10 @@ export function ProductFormPage() {
         <label style={labelStyle}>
           <span style={labelTextStyle}>Unidade (ex: m², kg, un)</span>
           <input style={inputStyle} value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="un" />
+        </label>
+        <label style={labelStyle}>
+          <span style={labelTextStyle}>Estoque inicial</span>
+          <input type="number" min="0" style={inputStyle} value={form.stockQty} onChange={(e) => setForm({ ...form, stockQty: e.target.value })} />
         </label>
         <label style={labelStyle}>
           <span style={labelTextStyle}>Estoque mínimo</span>

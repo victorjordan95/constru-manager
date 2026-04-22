@@ -27,7 +27,7 @@ export function createProduct(data: CreateProductInput) {
       finalPrice,
       unit: data.unit,
       minStock: data.minStock,
-      stockQty: 0,
+      stockQty: data.stockQty ?? 0,
     },
   });
 }

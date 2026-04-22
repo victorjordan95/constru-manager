@@ -18,6 +18,7 @@ export interface CreateProductPayload {
   markupPercent: number  // 0–99999.99
   unit?: string
   minStock?: number
+  stockQty?: number
 }
 
 export type UpdateProductPayload = Partial<CreateProductPayload>
