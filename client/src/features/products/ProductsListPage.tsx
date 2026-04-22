@@ -58,7 +58,8 @@ export function ProductsListPage() {
               <th style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'right', fontSize: '0.875rem', color: 'var(--color-primary)' }}>Custo</th>
               <th style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'right', fontSize: '0.875rem', color: 'var(--color-primary)' }}>Markup</th>
               <th style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'right', fontSize: '0.875rem', color: 'var(--color-primary)' }}>Preço Final</th>
-              <th style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'right', fontSize: '0.875rem', color: 'var(--color-primary)' }}>Estoque</th>
+              <th style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'right', fontSize: '0.875rem', color: 'var(--color-primary)' }}>Estoque Atual</th>
+              <th style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'right', fontSize: '0.875rem', color: 'var(--color-primary)' }}>Est. Mínimo</th>
               {user?.role === 'ADMIN' && (
                 <th style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'left', fontSize: '0.875rem', color: 'var(--color-primary)' }}>Ações</th>
               )}
@@ -67,7 +68,7 @@ export function ProductsListPage() {
           <tbody>
             {products?.length === 0 && (
               <tr>
-                <td colSpan={user?.role === 'ADMIN' ? 7 : 6} style={{ padding: 'var(--space-3)', textAlign: 'center', color: 'var(--color-neutral-600)' }}>
+                <td colSpan={user?.role === 'ADMIN' ? 8 : 7} style={{ padding: 'var(--space-3)', textAlign: 'center', color: 'var(--color-neutral-600)' }}>
                   Nenhum produto cadastrado.
                 </td>
               </tr>
@@ -79,7 +80,20 @@ export function ProductsListPage() {
                 <td style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(product.basePrice)}</td>
                 <td style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'right' }}>{product.markupPercent}%</td>
                 <td style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600, color: 'var(--color-success)' }}>{formatCurrency(product.finalPrice)}</td>
-                <td style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'right' }}>{product.stockQty}</td>
+                <td style={{
+                  padding: 'var(--space-1) var(--space-2)',
+                  textAlign: 'right',
+                  fontWeight: product.minStock > 0 && product.stockQty < product.minStock ? 700 : undefined,
+                  color: product.minStock > 0 && product.stockQty < product.minStock ? 'var(--color-danger)' : undefined,
+                }}>
+                  {product.stockQty}
+                  {product.minStock > 0 && product.stockQty < product.minStock && (
+                    <span title="Estoque abaixo do mínimo" style={{ marginLeft: 4, fontSize: '0.75rem' }}>⚠️</span>
+                  )}
+                </td>
+                <td style={{ padding: 'var(--space-1) var(--space-2)', textAlign: 'right', color: 'var(--color-neutral-600)' }}>
+                  {product.minStock}
+                </td>
                 {user?.role === 'ADMIN' && (
                   <td style={{ padding: 'var(--space-1) var(--space-2)' }}>
                     <div style={{ display: 'flex', gap: 8 }}>
