@@ -52,7 +52,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       return;
     }
 
-    const payload = { userId: user.id, role: user.role };
+    const payload = { userId: user.id, role: user.role, organizationId: user.organizationId ?? null };
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
 
@@ -77,7 +77,7 @@ export async function refresh(req: Request, res: Response, next: NextFunction): 
     }
 
     const payload = verifyRefreshToken(token);
-    const accessToken = signAccessToken({ userId: payload.userId, role: payload.role });
+    const accessToken = signAccessToken({ userId: payload.userId, role: payload.role, organizationId: payload.organizationId ?? null });
     res.json({ accessToken });
   } catch (err: unknown) {
     if (err instanceof Error && err.name === 'TokenExpiredError') {
