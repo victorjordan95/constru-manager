@@ -16,15 +16,15 @@ export function computeBalance(
 
 // ─── Balance ──────────────────────────────────────────────────────────────────
 
-export async function getOpeningBalance(): Promise<number> {
-  const settings = await prisma.financeSettings.findUnique({ where: { id: 'singleton' } });
+export async function getOpeningBalance(organizationId: string): Promise<number> {
+  const settings = await prisma.financeSettings.findUnique({ where: { organizationId } });
   return settings?.openingBalance ?? 0;
 }
 
-export async function updateOpeningBalance(openingBalance: number): Promise<number> {
+export async function updateOpeningBalance(openingBalance: number, organizationId: string): Promise<number> {
   const settings = await prisma.financeSettings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', openingBalance },
+    where: { organizationId },
+    create: { organizationId, openingBalance },
     update: { openingBalance },
   });
   return settings.openingBalance;
@@ -32,12 +32,11 @@ export async function updateOpeningBalance(openingBalance: number): Promise<numb
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
-export async function getFinanceSummary(month: number, year: number) {
+export async function getFinanceSummary(month: number, year: number, organizationId: string) {
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 1);
 
-  // Auto-upsert FixedExpenseLogs for all active expenses this month (idempotent)
-  const activeExpenses = await prisma.fixedExpense.findMany({ where: { isActive: true } });
+  const activeExpenses = await prisma.fixedExpense.findMany({ where: { isActive: true, organizationId } });
   for (const expense of activeExpenses) {
     await prisma.fixedExpenseLog.upsert({
       where: { fixedExpenseId_month_year: { fixedExpenseId: expense.id, month, year } },
@@ -46,52 +45,47 @@ export async function getFinanceSummary(month: number, year: number) {
     });
   }
 
-  // Balance: openingBalance + all transactions
-  const openingBalance = await getOpeningBalance();
+  const openingBalance = await getOpeningBalance(organizationId);
   const allTransactions = await prisma.cashTransaction.findMany({
+    where: {
+      OR: [
+        { installment: { sale: { quote: { organizationId } } } },
+        { fixedExpenseLog: { fixedExpense: { organizationId } } },
+      ],
+    },
     select: { type: true, amount: true },
   });
   const balance = computeBalance(openingBalance, allTransactions);
 
-  // Installments due this month
   const installments = await prisma.installment.findMany({
-    where: { dueDate: { gte: monthStart, lt: monthEnd } },
+    where: { dueDate: { gte: monthStart, lt: monthEnd }, sale: { quote: { organizationId } } },
     include: {
-      sale: {
-        include: {
-          quote: { include: { client: { select: { name: true } } } },
-        },
-      },
+      sale: { include: { quote: { include: { client: { select: { name: true } } } } } },
     },
     orderBy: { dueDate: 'asc' },
   });
 
-  // Fixed expense logs for this month
   const expenseLogs = await prisma.fixedExpenseLog.findMany({
-    where: { month, year },
+    where: { month, year, fixedExpense: { organizationId } },
     include: { fixedExpense: { select: { name: true, category: true, dueDay: true, amount: true } } },
     orderBy: { fixedExpense: { dueDay: 'asc' } },
   });
 
-  // Projected values
-  const incoming = installments
-    .filter((i) => i.status !== 'PAID')
-    .reduce((s, i) => s + i.amount, 0);
-  const outgoing = expenseLogs
-    .filter((l) => l.status === 'PENDING')
-    .reduce((s, l) => s + l.fixedExpense.amount, 0);
+  const incoming = installments.filter((i) => i.status !== 'PAID').reduce((s, i) => s + i.amount, 0);
+  const outgoing = expenseLogs.filter((l) => l.status === 'PENDING').reduce((s, l) => s + l.fixedExpense.amount, 0);
 
-  // Net profit: paid transactions recorded this month
   const monthTransactions = await prisma.cashTransaction.findMany({
-    where: { date: { gte: monthStart, lt: monthEnd } },
+    where: {
+      date: { gte: monthStart, lt: monthEnd },
+      OR: [
+        { installment: { sale: { quote: { organizationId } } } },
+        { fixedExpenseLog: { fixedExpense: { organizationId } } },
+      ],
+    },
     select: { type: true, amount: true },
   });
-  const paidIncome = monthTransactions
-    .filter((t) => t.type === 'INCOME')
-    .reduce((s, t) => s + t.amount, 0);
-  const paidExpense = monthTransactions
-    .filter((t) => t.type === 'EXPENSE')
-    .reduce((s, t) => s + t.amount, 0);
+  const paidIncome = monthTransactions.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
+  const paidExpense = monthTransactions.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
   const netProfit = paidIncome - paidExpense;
 
   return {
@@ -122,9 +116,9 @@ export async function getFinanceSummary(month: number, year: number) {
 
 // ─── Pay installment ──────────────────────────────────────────────────────────
 
-export async function payInstallment(id: string) {
-  const installment = await prisma.installment.findUnique({
-    where: { id },
+export async function payInstallment(id: string, organizationId: string) {
+  const installment = await prisma.installment.findFirst({
+    where: { id, sale: { quote: { organizationId } } },
     include: {
       sale: { include: { quote: { include: { client: { select: { name: true } } } } } },
     },
@@ -153,7 +147,7 @@ export async function payInstallment(id: string) {
 
 // ─── Cashflow ─────────────────────────────────────────────────────────────────
 
-export async function getCashflow(months: number) {
+export async function getCashflow(months: number, organizationId: string) {
   const now = new Date();
   const results: Array<{ month: number; year: number; income: number; expense: number }> = [];
 
@@ -165,39 +159,37 @@ export async function getCashflow(months: number) {
     const end = new Date(year, month, 1);
 
     const transactions = await prisma.cashTransaction.findMany({
-      where: { date: { gte: start, lt: end } },
+      where: {
+        date: { gte: start, lt: end },
+        OR: [
+          { installment: { sale: { quote: { organizationId } } } },
+          { fixedExpenseLog: { fixedExpense: { organizationId } } },
+        ],
+      },
       select: { type: true, amount: true },
     });
 
-    const income = transactions
-      .filter((t) => t.type === 'INCOME')
-      .reduce((s, t) => s + t.amount, 0);
-    const expense = transactions
-      .filter((t) => t.type === 'EXPENSE')
-      .reduce((s, t) => s + t.amount, 0);
-
+    const income = transactions.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
+    const expense = transactions.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
     results.push({ month, year, income, expense });
   }
 
   return results;
 }
 
-// ─── Overdue installments ──────────────────────────────────────────────────────
+// ─── Overdue installments ─────────────────────────────────────────────────────
 
-export async function getOverdueInstallments() {
+export async function getOverdueInstallments(organizationId: string) {
   const now = new Date();
 
   const installments = await prisma.installment.findMany({
     where: {
       status: 'PENDING',
       dueDate: { lt: now },
+      sale: { quote: { organizationId } },
     },
     include: {
-      sale: {
-        include: {
-          quote: { include: { client: { select: { name: true } } } },
-        },
-      },
+      sale: { include: { quote: { include: { client: { select: { name: true } } } } } },
     },
     orderBy: { dueDate: 'asc' },
   });
@@ -213,9 +205,9 @@ export async function getOverdueInstallments() {
 
 // ─── Pay expense log ──────────────────────────────────────────────────────────
 
-export async function payExpenseLog(id: string) {
-  const log = await prisma.fixedExpenseLog.findUnique({
-    where: { id },
+export async function payExpenseLog(id: string, organizationId: string) {
+  const log = await prisma.fixedExpenseLog.findFirst({
+    where: { id, fixedExpense: { organizationId } },
     include: { fixedExpense: { select: { name: true, amount: true } } },
   });
   if (!log) return { error: 'NOT_FOUND' as const };
@@ -242,12 +234,11 @@ export async function payExpenseLog(id: string) {
 
 // ─── DRE ──────────────────────────────────────────────────────────────────────
 
-export async function getDRE(month: number, year: number): Promise<DREResponse> {
+export async function getDRE(month: number, year: number, organizationId: string): Promise<DREResponse> {
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd   = new Date(year, month,     1);
 
-  // Auto-upsert FixedExpenseLogs for all active expenses this month (idempotent)
-  const activeExpenses = await prisma.fixedExpense.findMany({ where: { isActive: true } });
+  const activeExpenses = await prisma.fixedExpense.findMany({ where: { isActive: true, organizationId } });
   for (const expense of activeExpenses) {
     await prisma.fixedExpenseLog.upsert({
       where: { fixedExpenseId_month_year: { fixedExpenseId: expense.id, month, year } },
@@ -256,22 +247,29 @@ export async function getDRE(month: number, year: number): Promise<DREResponse> 
     });
   }
 
-  // Parallelize the four independent data queries
   const [installments, expenseLogs, incomeTransactions, expenseTransactions] = await Promise.all([
     prisma.installment.findMany({
-      where: { dueDate: { gte: monthStart, lt: monthEnd }, status: { not: 'PAID' } },
+      where: { dueDate: { gte: monthStart, lt: monthEnd }, status: { not: 'PAID' }, sale: { quote: { organizationId } } },
       select: { amount: true },
     }),
     prisma.fixedExpenseLog.findMany({
-      where: { month, year, status: 'PENDING' },
+      where: { month, year, status: 'PENDING', fixedExpense: { organizationId } },
       include: { fixedExpense: { select: { amount: true, category: true } } },
     }),
     prisma.cashTransaction.findMany({
-      where: { type: 'INCOME', date: { gte: monthStart, lt: monthEnd } },
+      where: {
+        type: 'INCOME',
+        date: { gte: monthStart, lt: monthEnd },
+        installment: { sale: { quote: { organizationId } } },
+      },
       select: { amount: true },
     }),
     prisma.cashTransaction.findMany({
-      where: { type: 'EXPENSE', date: { gte: monthStart, lt: monthEnd } },
+      where: {
+        type: 'EXPENSE',
+        date: { gte: monthStart, lt: monthEnd },
+        fixedExpenseLog: { fixedExpense: { organizationId } },
+      },
       include: {
         fixedExpenseLog: { include: { fixedExpense: { select: { category: true } } } },
       },
@@ -283,29 +281,26 @@ export async function getDRE(month: number, year: number): Promise<DREResponse> 
   const receitaRealizada = incomeTransactions.reduce((s, t) => s + t.amount, 0);
   const despesaRealizada = expenseTransactions.reduce((s, t) => s + t.amount, 0);
 
-  // Agrupar previsto por categoria
   const prevMap = new Map<string | null, number>();
   for (const log of expenseLogs) {
     const cat = log.fixedExpense.category ?? null;
     prevMap.set(cat, (prevMap.get(cat) ?? 0) + log.fixedExpense.amount);
   }
 
-  // Agrupar realizado por categoria
   const realMap = new Map<string | null, number>();
   for (const tx of expenseTransactions) {
     const cat = tx.fixedExpenseLog?.fixedExpense.category ?? null;
     realMap.set(cat, (realMap.get(cat) ?? 0) + tx.amount);
   }
 
-  // Unir todas as categorias presentes
   const allCategories = new Set([...prevMap.keys(), ...realMap.keys()]);
   const expensesByCategory = [...allCategories]
     .sort((a, b) => (a ?? '').localeCompare(b ?? ''))
     .map((category) => ({
-    category,
-    previsto:  prevMap.get(category)  ?? 0,
-    realizado: realMap.get(category) ?? 0,
-  }));
+      category,
+      previsto:  prevMap.get(category)  ?? 0,
+      realizado: realMap.get(category) ?? 0,
+    }));
 
   return {
     month,

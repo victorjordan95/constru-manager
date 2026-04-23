@@ -59,8 +59,8 @@ const quoteListInclude = {
 
 // ─── Service functions ─────────────────────────────────────────────────────────
 
-export async function createQuote(data: CreateQuoteInput) {
-  const client = await prisma.client.findFirst({ where: { id: data.clientId } })
+export async function createQuote(data: CreateQuoteInput & { organizationId: string }) {
+  const client = await prisma.client.findFirst({ where: { id: data.clientId, isActive: true, organizationId: data.organizationId } })
   if (!client) return { error: 'CLIENT_NOT_FOUND' as const }
 
   const productIds = data.items.filter((i) => i.productId).map((i) => i.productId!)
@@ -69,13 +69,13 @@ export async function createQuote(data: CreateQuoteInput) {
   const [products, kits] = await Promise.all([
     productIds.length > 0
       ? prisma.product.findMany({
-          where: { id: { in: productIds }, isActive: true },
+          where: { id: { in: productIds }, isActive: true, organizationId: data.organizationId },
           select: { id: true, finalPrice: true },
         })
       : Promise.resolve([]),
     kitIds.length > 0
       ? prisma.kit.findMany({
-          where: { id: { in: kitIds }, isActive: true },
+          where: { id: { in: kitIds }, isActive: true, organizationId: data.organizationId },
           select: { id: true, totalPrice: true },
         })
       : Promise.resolve([]),
@@ -112,7 +112,7 @@ export async function createQuote(data: CreateQuoteInput) {
   )
 
   const quote = await prisma.$transaction(async (tx) => {
-    const newQuote = await tx.quote.create({ data: { clientId: data.clientId } })
+    const newQuote = await tx.quote.create({ data: { clientId: data.clientId, organizationId: data.organizationId } })
     const version = await tx.quoteVersion.create({
       data: {
         quoteId: newQuote.id,
@@ -134,26 +134,26 @@ export async function createQuote(data: CreateQuoteInput) {
   return { quote }
 }
 
-// Stubs — replaced in Tasks 4-7
-export async function listQuotes() {
+export async function listQuotes(organizationId: string) {
   return prisma.quote.findMany({
+    where: { organizationId },
     include: quoteListInclude,
     orderBy: { createdAt: 'desc' },
   })
 }
 
-export async function getQuote(id: string) {
-  const quote = await prisma.quote.findUnique({
-    where: { id },
+export async function getQuote(id: string, organizationId: string) {
+  const quote = await prisma.quote.findFirst({
+    where: { id, organizationId },
     include: quoteDetailInclude,
   })
   if (!quote) return { error: 'NOT_FOUND' as const }
   return { quote }
 }
 
-export async function addVersion(id: string, data: AddVersionInput) {
-  const existing = await prisma.quote.findUnique({
-    where: { id },
+export async function addVersion(id: string, organizationId: string, data: AddVersionInput) {
+  const existing = await prisma.quote.findFirst({
+    where: { id, organizationId },
     include: { versions: { select: { version: true }, orderBy: { version: 'desc' } } },
   })
   if (!existing) return { error: 'NOT_FOUND' as const }
@@ -164,13 +164,13 @@ export async function addVersion(id: string, data: AddVersionInput) {
   const [products, kits] = await Promise.all([
     productIds.length > 0
       ? prisma.product.findMany({
-          where: { id: { in: productIds }, isActive: true },
+          where: { id: { in: productIds }, isActive: true, organizationId },
           select: { id: true, finalPrice: true },
         })
       : Promise.resolve([]),
     kitIds.length > 0
       ? prisma.kit.findMany({
-          where: { id: { in: kitIds }, isActive: true },
+          where: { id: { in: kitIds }, isActive: true, organizationId },
           select: { id: true, totalPrice: true },
         })
       : Promise.resolve([]),
@@ -230,8 +230,8 @@ export async function addVersion(id: string, data: AddVersionInput) {
   return { quote }
 }
 
-export async function updateStatus(id: string, data: UpdateStatusInput) {
-  const existing = await prisma.quote.findUnique({ where: { id } })
+export async function updateStatus(id: string, organizationId: string, data: UpdateStatusInput) {
+  const existing = await prisma.quote.findFirst({ where: { id, organizationId } })
   if (!existing) return { error: 'NOT_FOUND' as const }
 
   const quote = await prisma.quote.update({
@@ -242,12 +242,10 @@ export async function updateStatus(id: string, data: UpdateStatusInput) {
   return { quote }
 }
 
-export async function duplicateQuote(id: string) {
-  const quote = await prisma.quote.findUnique({
-    where: { id },
-    include: {
-      activeVersion: { include: { items: true } },
-    },
+export async function duplicateQuote(id: string, organizationId: string) {
+  const quote = await prisma.quote.findFirst({
+    where: { id, organizationId },
+    include: { activeVersion: { include: { items: true } } },
   })
   if (!quote) return { error: 'NOT_FOUND' as const }
   if (!quote.activeVersion) return { error: 'NO_ACTIVE_VERSION' as const }
@@ -255,7 +253,7 @@ export async function duplicateQuote(id: string) {
   const sourceVersion = quote.activeVersion
 
   const newQuote = await prisma.$transaction(async (tx) => {
-    const created = await tx.quote.create({ data: { clientId: quote.clientId } })
+    const created = await tx.quote.create({ data: { clientId: quote.clientId, organizationId } })
     const version = await tx.quoteVersion.create({
       data: {
         quoteId: created.id,
@@ -284,13 +282,10 @@ export async function duplicateQuote(id: string) {
   return { id: newQuote.id }
 }
 
-export async function acceptQuote(id: string, data: AcceptQuoteInput) {
-  const quote = await prisma.quote.findUnique({
-    where: { id },
-    include: {
-      activeVersion: true,
-      sale: true,
-    },
+export async function acceptQuote(id: string, organizationId: string, data: AcceptQuoteInput) {
+  const quote = await prisma.quote.findFirst({
+    where: { id, organizationId },
+    include: { activeVersion: true, sale: true },
   })
   if (!quote) return { error: 'NOT_FOUND' as const }
   if (quote.status === 'ACCEPTED') return { error: 'ALREADY_ACCEPTED' as const }
@@ -317,10 +312,7 @@ export async function acceptQuote(id: string, data: AcceptQuoteInput) {
           : {}),
       },
     })
-    await tx.quote.update({
-      where: { id },
-      data: { status: 'ACCEPTED' },
-    })
+    await tx.quote.update({ where: { id }, data: { status: 'ACCEPTED' } })
   })
 
   const updatedQuote = await prisma.quote.findUnique({
