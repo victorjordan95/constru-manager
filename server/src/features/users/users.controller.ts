@@ -10,13 +10,11 @@ const USER_SELECT = {
   createdAt: true,
 } as const;
 
-export async function handleListUsers(
-  _req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
+export async function handleListUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const { organizationId } = (req as AuthenticatedRequest).user;
     const users = await prisma.user.findMany({
+      where: { organizationId: organizationId ?? undefined },
       orderBy: { createdAt: 'desc' },
       select: USER_SELECT,
     });
@@ -26,11 +24,7 @@ export async function handleListUsers(
   }
 }
 
-export async function handleDeactivateUser(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
+export async function handleDeactivateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const targetId = req.params.id as string;
     const authReq = req as AuthenticatedRequest;
@@ -41,7 +35,7 @@ export async function handleDeactivateUser(
     }
 
     const existing = await prisma.user.findUnique({ where: { id: targetId } });
-    if (!existing) {
+    if (!existing || existing.organizationId !== authReq.user.organizationId) {
       res.status(404).json({ error: 'User not found', code: 'NOT_FOUND' });
       return;
     }
