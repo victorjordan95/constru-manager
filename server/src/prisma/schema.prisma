@@ -10,6 +10,7 @@ datasource db {
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 enum Role {
+  SUPER_ADMIN
   ADMIN
   SALES
   FINANCE
@@ -51,27 +52,47 @@ enum ExpenseLogStatus {
 
 // ─── Models ──────────────────────────────────────────────────────────────────
 
+model Organization {
+  id              String           @id @default(cuid())
+  name            String
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  users           User[]
+  clients         Client[]
+  products        Product[]
+  kits            Kit[]
+  quotes          Quote[]
+  fixedExpenses   FixedExpense[]
+  financeSettings FinanceSettings?
+}
+
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  role         Role
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  id             String        @id @default(cuid())
+  email          String        @unique
+  passwordHash   String
+  role           Role
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 }
 
 model Client {
-  id         String   @id @default(cuid())
-  name       String
-  taxId      String   @unique
-  nationalId String?
-  address    String?
-  zipCode    String?
-  email      String?
-  phone      String?
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  quotes     Quote[]
+  id             String       @id @default(cuid())
+  name           String
+  taxId          String
+  nationalId     String?
+  address        String?
+  zipCode        String?
+  email          String?
+  phone          String?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  quotes         Quote[]
+
+  @@unique([taxId, organizationId])
 }
 
 model Product {
@@ -84,18 +105,22 @@ model Product {
   stockQty       Int             @default(0)
   minStock       Int?
   isActive       Boolean         @default(true)
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id])
   kitItems       KitItem[]
   quoteItems     QuoteItem[]
   stockMovements StockMovement[]
 }
 
 model Kit {
-  id         String      @id @default(cuid())
-  name       String
-  totalPrice Int
-  isActive   Boolean     @default(true)
-  items      KitItem[]
-  quoteItems QuoteItem[]
+  id             String       @id @default(cuid())
+  name           String
+  totalPrice     Int
+  isActive       Boolean      @default(true)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  items          KitItem[]
+  quoteItems     QuoteItem[]
 }
 
 model KitItem {
@@ -116,6 +141,8 @@ model Quote {
   activeVersion   QuoteVersion?  @relation("ActiveVersion", fields: [activeVersionId], references: [id])
   versions        QuoteVersion[] @relation("AllVersions")
   sale            Sale?
+  organizationId  String
+  organization    Organization   @relation(fields: [organizationId], references: [id])
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 }
@@ -183,13 +210,15 @@ model CashTransaction {
 }
 
 model FixedExpense {
-  id       String            @id @default(cuid())
-  name     String
-  amount   Int
-  dueDay   Int
-  category String?
-  isActive Boolean           @default(true)
-  logs     FixedExpenseLog[]
+  id             String            @id @default(cuid())
+  name           String
+  amount         Int
+  dueDay         Int
+  category       String?
+  isActive       Boolean           @default(true)
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  logs           FixedExpenseLog[]
 }
 
 model FixedExpenseLog {
@@ -216,7 +245,9 @@ model StockMovement {
 }
 
 model FinanceSettings {
-  id             String   @id @default("singleton")
-  openingBalance Int      @default(0) // stored in cents
-  updatedAt      DateTime @updatedAt
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  openingBalance Int          @default(0)
+  updatedAt      DateTime     @updatedAt
 }
