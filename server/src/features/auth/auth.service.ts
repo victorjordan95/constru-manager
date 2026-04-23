@@ -37,6 +37,8 @@ function assertJwtPayload(decoded: unknown): asserts decoded is JwtPayload {
   ) {
     throw new Error('Invalid token payload');
   }
+  const p = decoded as Record<string, unknown>;
+  if (p.organizationId === undefined) p.organizationId = null;
 }
 
 export function verifyAccessToken(token: string): JwtPayload {
