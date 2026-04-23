@@ -1,6 +1,7 @@
 export interface AuthUser {
   userId: string
-  role: 'ADMIN' | 'SALES' | 'FINANCE'
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'SALES' | 'FINANCE'
+  organizationId: string | null
 }
 
 export function isTokenExpired(token: string): boolean {
@@ -22,6 +23,7 @@ export function decodeToken(token: string): AuthUser {
     const payload = JSON.parse(atob(base64)) as {
       userId: string
       role: string
+      organizationId?: string | null
     }
     if (!payload.userId || !payload.role) {
       throw new Error('Token payload missing required fields')
@@ -29,6 +31,7 @@ export function decodeToken(token: string): AuthUser {
     return {
       userId: payload.userId,
       role: payload.role as AuthUser['role'],
+      organizationId: payload.organizationId ?? null,
     }
   } catch {
     throw new Error('Invalid token')

@@ -21,6 +21,7 @@ import { FinanceDashboardPage } from '@/features/finance/FinanceDashboardPage'
 import { DrePage } from '@/features/finance/DrePage'
 import { UsersListPage } from '@/features/users/UsersListPage'
 import { UserFormPage } from '@/features/users/UserFormPage'
+import { OrganizationsPage } from '@/features/organizations/OrganizationsPage'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -198,6 +199,16 @@ const userCreateRoute = createRoute({
   },
 })
 
+const organizationsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/organizations',
+  component: OrganizationsPage,
+  beforeLoad: () => {
+    const { user } = useAuthStore.getState()
+    if (user?.role !== 'SUPER_ADMIN') throw redirect({ to: '/' })
+  },
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authenticatedRoute.addChildren([
@@ -222,6 +233,7 @@ const routeTree = rootRoute.addChildren([
     dreRoute,
     usersRoute,
     userCreateRoute,
+    organizationsRoute,
   ]),
 ])
 

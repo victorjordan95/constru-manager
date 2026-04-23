@@ -39,71 +39,41 @@ export function AppLayout() {
           flexDirection: 'column',
         }}
       >
-        <p
-          style={{
-            fontWeight: 700,
-            marginBottom: 'var(--space-3)',
-            fontSize: '1rem',
-          }}
-        >
+        <p style={{ fontWeight: 700, marginBottom: 'var(--space-3)', fontSize: '1rem' }}>
           Constru Manager
         </p>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-          {(user?.role === 'SALES' || user?.role === 'ADMIN') && (
+          {user?.role === 'SUPER_ADMIN' ? (
             <li>
-              <Link to="/clients" style={linkStyle}>
-                Clientes
-              </Link>
+              <Link to="/organizations" style={linkStyle}>Organizações</Link>
             </li>
-          )}
-          {(user?.role === 'SALES' || user?.role === 'ADMIN') && (
-            <li>
-              <Link to="/products" style={linkStyle}>
-                Produtos
-              </Link>
-            </li>
-          )}
-          {user?.role === 'ADMIN' && (
-            <li>
-              <Link to="/kits" style={linkStyle}>
-                Kits
-              </Link>
-            </li>
-          )}
-          {user?.role === 'ADMIN' && (
-            <li>
-              <Link to="/users" style={linkStyle}>
-                Usuários
-              </Link>
-            </li>
-          )}
-          {(user?.role === 'SALES' || user?.role === 'ADMIN') && (
-            <li>
-              <Link to="/quotes" style={linkStyle}>
-                Orçamentos
-              </Link>
-            </li>
-          )}
-          {(user?.role === 'ADMIN' || user?.role === 'FINANCE') && (
-            <li>
-              <Link to="/finance" style={linkStyle}>
-                Financeiro
-              </Link>
-            </li>
-          )}
-          {(user?.role === 'ADMIN' || user?.role === 'FINANCE') && (
-            <li>
-              <Link to="/dre" style={linkStyle}>
-                DRE
-              </Link>
-            </li>
-          )}
-          {(user?.role === 'ADMIN' || user?.role === 'FINANCE') && (
-            <li>
-              <Link to="/fixed-expenses" style={linkStyle}>
-                Despesas Fixas
-              </Link>
-            </li>
+          ) : (
+            <>
+              {(user?.role === 'SALES' || user?.role === 'ADMIN') && (
+                <li><Link to="/clients" style={linkStyle}>Clientes</Link></li>
+              )}
+              {(user?.role === 'SALES' || user?.role === 'ADMIN') && (
+                <li><Link to="/products" style={linkStyle}>Produtos</Link></li>
+              )}
+              {user?.role === 'ADMIN' && (
+                <li><Link to="/kits" style={linkStyle}>Kits</Link></li>
+              )}
+              {user?.role === 'ADMIN' && (
+                <li><Link to="/users" style={linkStyle}>Usuários</Link></li>
+              )}
+              {(user?.role === 'SALES' || user?.role === 'ADMIN') && (
+                <li><Link to="/quotes" style={linkStyle}>Orçamentos</Link></li>
+              )}
+              {(user?.role === 'ADMIN' || user?.role === 'FINANCE') && (
+                <li><Link to="/finance" style={linkStyle}>Financeiro</Link></li>
+              )}
+              {(user?.role === 'ADMIN' || user?.role === 'FINANCE') && (
+                <li><Link to="/dre" style={linkStyle}>DRE</Link></li>
+              )}
+              {(user?.role === 'ADMIN' || user?.role === 'FINANCE') && (
+                <li><Link to="/fixed-expenses" style={linkStyle}>Despesas Fixas</Link></li>
+              )}
+            </>
           )}
         </ul>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: 'var(--space-2)' }}>
