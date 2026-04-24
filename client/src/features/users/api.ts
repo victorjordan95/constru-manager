@@ -12,6 +12,7 @@ export interface RegisterUserPayload {
   email: string
   password: string
   role: 'ADMIN' | 'SALES' | 'FINANCE'
+  organizationId?: string
 }
 
 export async function getUsers(): Promise<User[]> {

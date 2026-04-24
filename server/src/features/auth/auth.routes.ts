@@ -21,4 +21,4 @@ export const authRouter = Router();
 authRouter.post('/login', loginLimiter, login);
 authRouter.post('/refresh', refresh);
 authRouter.post('/logout', authenticate, logout);
-authRouter.post('/register', authenticate, authorize('ADMIN'), register);
+authRouter.post('/register', authenticate, authorize('ADMIN', 'SUPER_ADMIN'), register);

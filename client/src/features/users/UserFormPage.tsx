@@ -1,19 +1,25 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useRegisterUser } from './hooks'
+import { useOrganizations } from '@/features/organizations/hooks'
+import { useAuthStore } from '@/stores/authStore'
 import type { RegisterUserPayload } from './api'
 
 type FormState = {
   email: string
   password: string
   role: 'ADMIN' | 'SALES' | 'FINANCE'
+  organizationId: string
 }
 
-const empty: FormState = { email: '', password: '', role: 'SALES' }
+const empty: FormState = { email: '', password: '', role: 'SALES', organizationId: '' }
 
 export function UserFormPage() {
   const navigate = useNavigate()
   const registerMutation = useRegisterUser()
+  const { user: me } = useAuthStore()
+  const isSuperAdmin = me?.role === 'SUPER_ADMIN'
+  const { data: orgs } = useOrganizations({ enabled: isSuperAdmin })
   const [form, setForm] = useState<FormState>(empty)
   const [serverError, setServerError] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
@@ -32,6 +38,7 @@ export function UserFormPage() {
       email: form.email.trim(),
       password: form.password,
       role: form.role,
+      ...(isSuperAdmin && form.organizationId ? { organizationId: form.organizationId } : {}),
     }
 
     try {
@@ -140,6 +147,22 @@ export function UserFormPage() {
             <option value="FINANCE">Financeiro</option>
           </select>
         </label>
+        {isSuperAdmin && (
+          <label style={labelStyle} htmlFor="u-org">
+            <span style={labelTextStyle}>Organização</span>
+            <select
+              id="u-org"
+              style={inputStyle}
+              value={form.organizationId}
+              onChange={(e) => setForm({ ...form, organizationId: e.target.value })}
+            >
+              <option value="">— Sem organização —</option>
+              {orgs?.map((o) => (
+                <option key={o.id} value={o.id}>{o.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <div style={{ display: 'flex', gap: 'var(--space-1)', paddingTop: 'var(--space-1)' }}>
           <button
             type="submit"

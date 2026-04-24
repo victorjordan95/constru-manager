@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listOrganizations, createOrganization, createAdminForOrg } from './api'
 
-export function useOrganizations() {
-  return useQuery({ queryKey: ['organizations'], queryFn: listOrganizations })
+export function useOrganizations(options?: { enabled?: boolean }) {
+  return useQuery({ queryKey: ['organizations'], queryFn: listOrganizations, enabled: options?.enabled ?? true })
 }
 
 export function useCreateOrganization() {

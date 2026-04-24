@@ -28,6 +28,7 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   role: z.enum(['ADMIN', 'SALES', 'FINANCE'] as const),
+  organizationId: z.string().optional(),
 });
 
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -121,8 +122,9 @@ export async function register(
       return;
     }
 
-    const { email, password, role } = parsed.data;
-    const { organizationId } = (req as AuthenticatedRequest).user;
+    const { email, password, role, organizationId: bodyOrgId } = parsed.data;
+    const { organizationId: userOrgId } = (req as AuthenticatedRequest).user;
+    const organizationId = bodyOrgId ?? userOrgId ?? undefined;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -132,7 +134,7 @@ export async function register(
 
     const passwordHash = await hashPassword(password);
     const user = await prisma.user.create({
-      data: { email, passwordHash, role, organizationId: organizationId ?? undefined },
+      data: { email, passwordHash, role, organizationId },
       select: { id: true, email: true, role: true, isActive: true, createdAt: true },
     });
 

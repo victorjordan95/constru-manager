@@ -44,9 +44,10 @@ export function AppLayout() {
         </p>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
           {user?.role === 'SUPER_ADMIN' ? (
-            <li>
-              <Link to="/organizations" style={linkStyle}>Organizações</Link>
-            </li>
+            <>
+              <li><Link to="/organizations" style={linkStyle}>Organizações</Link></li>
+              <li><Link to="/users" style={linkStyle}>Usuários</Link></li>
+            </>
           ) : (
             <>
               {(user?.role === 'SALES' || user?.role === 'ADMIN') && (

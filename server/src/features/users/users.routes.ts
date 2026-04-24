@@ -7,5 +7,5 @@ export const usersRouter = Router();
 
 usersRouter.use(authenticate);
 
-usersRouter.get('/', authorize('ADMIN'), handleListUsers);
-usersRouter.patch('/:id/deactivate', authorize('ADMIN'), handleDeactivateUser);
+usersRouter.get('/', authorize('ADMIN', 'SUPER_ADMIN'), handleListUsers);
+usersRouter.patch('/:id/deactivate', authorize('ADMIN', 'SUPER_ADMIN'), handleDeactivateUser);
