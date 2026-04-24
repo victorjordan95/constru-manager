@@ -9,7 +9,7 @@ import {
   isRefreshTokenBlacklisted,
 } from './auth.service';
 
-const payload = { userId: 'user-123', role: 'ADMIN' as const };
+const payload = { userId: 'user-123', role: 'ADMIN' as const, organizationId: null };
 
 describe('hashPassword / verifyPassword', () => {
   it('hashes a password and verifies it correctly', async () => {

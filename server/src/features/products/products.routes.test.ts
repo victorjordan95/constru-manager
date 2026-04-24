@@ -9,13 +9,16 @@ const SALES_EMAIL = `${UNIQUE}-sales@test.com`;
 
 let adminToken: string;
 let salesToken: string;
+let testOrgId: string;
 
 beforeAll(async () => {
+  const org = await prisma.organization.create({ data: { name: `Org ${UNIQUE}` } });
+  testOrgId = org.id;
   const pw = await hashPassword('TestPass123!');
   await prisma.user.createMany({
     data: [
-      { email: ADMIN_EMAIL, passwordHash: pw, role: 'ADMIN' },
-      { email: SALES_EMAIL, passwordHash: pw, role: 'SALES' },
+      { email: ADMIN_EMAIL, passwordHash: pw, role: 'ADMIN', organizationId: testOrgId },
+      { email: SALES_EMAIL, passwordHash: pw, role: 'SALES', organizationId: testOrgId },
     ],
   });
   const users = await prisma.user.findMany({
@@ -23,13 +26,14 @@ beforeAll(async () => {
     select: { id: true, email: true, role: true },
   });
   const byEmail = Object.fromEntries(users.map(u => [u.email, u]));
-  adminToken = signAccessToken({ userId: byEmail[ADMIN_EMAIL].id, role: byEmail[ADMIN_EMAIL].role });
-  salesToken = signAccessToken({ userId: byEmail[SALES_EMAIL].id, role: byEmail[SALES_EMAIL].role });
+  adminToken = signAccessToken({ userId: byEmail[ADMIN_EMAIL].id, role: byEmail[ADMIN_EMAIL].role, organizationId: testOrgId });
+  salesToken = signAccessToken({ userId: byEmail[SALES_EMAIL].id, role: byEmail[SALES_EMAIL].role, organizationId: testOrgId });
 });
 
 afterAll(async () => {
   await prisma.product.deleteMany({ where: { name: { startsWith: UNIQUE } } });
   await prisma.user.deleteMany({ where: { email: { startsWith: UNIQUE } } });
+  await prisma.organization.deleteMany({ where: { name: { startsWith: `Org ${UNIQUE}` } } });
   await prisma.$disconnect();
 });
 
@@ -113,6 +117,7 @@ describe('PUT /products/:id', () => {
         markupPercent: 10,
         finalPrice: 5500,
         stockQty: 0,
+        organizationId: testOrgId,
       },
     });
     productId = p.id;
@@ -158,6 +163,7 @@ describe('DELETE /products/:id', () => {
         markupPercent: 0,
         finalPrice: 100,
         stockQty: 0,
+        organizationId: testOrgId,
       },
     });
     productId = p.id;
@@ -181,6 +187,7 @@ describe('DELETE /products/:id', () => {
         markupPercent: 0,
         finalPrice: 100,
         stockQty: 0,
+        organizationId: testOrgId,
       },
     });
     const res = await request(app)

@@ -11,7 +11,7 @@ function mockRes() {
   return res;
 }
 
-const validPayload = { userId: 'user-1', role: 'ADMIN' as const };
+const validPayload = { userId: 'user-1', role: 'ADMIN' as const, organizationId: null };
 
 describe('authenticate middleware', () => {
   it('calls next() and injects req.user with valid Bearer token', () => {

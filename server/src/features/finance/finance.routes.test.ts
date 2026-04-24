@@ -14,14 +14,17 @@ let salesToken: string;
 let installmentId: string;
 let expenseLogId: string;
 let fixedExpenseId: string;
+let testOrgId: string;
 
 beforeAll(async () => {
+  const org = await prisma.organization.create({ data: { name: `Org ${UNIQUE}` } });
+  testOrgId = org.id;
   const pw = await hashPassword('TestPass123!');
   await prisma.user.createMany({
     data: [
-      { email: ADMIN_EMAIL, passwordHash: pw, role: 'ADMIN' },
-      { email: FINANCE_EMAIL, passwordHash: pw, role: 'FINANCE' },
-      { email: SALES_EMAIL, passwordHash: pw, role: 'SALES' },
+      { email: ADMIN_EMAIL, passwordHash: pw, role: 'ADMIN', organizationId: testOrgId },
+      { email: FINANCE_EMAIL, passwordHash: pw, role: 'FINANCE', organizationId: testOrgId },
+      { email: SALES_EMAIL, passwordHash: pw, role: 'SALES', organizationId: testOrgId },
     ],
   });
   const users = await prisma.user.findMany({
@@ -29,16 +32,16 @@ beforeAll(async () => {
     select: { id: true, email: true, role: true },
   });
   const byEmail = Object.fromEntries(users.map((u) => [u.email, u]));
-  adminToken = signAccessToken({ userId: byEmail[ADMIN_EMAIL].id, role: byEmail[ADMIN_EMAIL].role });
-  financeToken = signAccessToken({ userId: byEmail[FINANCE_EMAIL].id, role: byEmail[FINANCE_EMAIL].role });
-  salesToken = signAccessToken({ userId: byEmail[SALES_EMAIL].id, role: byEmail[SALES_EMAIL].role });
+  adminToken = signAccessToken({ userId: byEmail[ADMIN_EMAIL].id, role: byEmail[ADMIN_EMAIL].role, organizationId: testOrgId });
+  financeToken = signAccessToken({ userId: byEmail[FINANCE_EMAIL].id, role: byEmail[FINANCE_EMAIL].role, organizationId: testOrgId });
+  salesToken = signAccessToken({ userId: byEmail[SALES_EMAIL].id, role: byEmail[SALES_EMAIL].role, organizationId: testOrgId });
 
   // Create a client, product, quote, sale, and installment for pay tests
-  const client = await prisma.client.create({ data: { name: `${UNIQUE} Client`, taxId: `FIN${Date.now()}` } });
+  const client = await prisma.client.create({ data: { name: `${UNIQUE} Client`, taxId: `FIN${Date.now()}`, organizationId: testOrgId } });
   const product = await prisma.product.create({
-    data: { name: `${UNIQUE} Prod`, basePrice: 10000, markupPercent: 20, finalPrice: 12000, stockQty: 0 },
+    data: { name: `${UNIQUE} Prod`, basePrice: 10000, markupPercent: 20, finalPrice: 12000, stockQty: 0, organizationId: testOrgId },
   });
-  const quote = await prisma.quote.create({ data: { clientId: client.id } });
+  const quote = await prisma.quote.create({ data: { clientId: client.id, organizationId: testOrgId } });
   const version = await prisma.quoteVersion.create({
     data: {
       quoteId: quote.id, version: 1, subtotal: 12000, laborCost: 0, discount: 0, total: 12000,
@@ -56,7 +59,7 @@ beforeAll(async () => {
 
   // Create a fixed expense and its log for pay tests
   const expense = await prisma.fixedExpense.create({
-    data: { name: `${UNIQUE} Conta Luz`, amount: 30000, dueDay: 10 },
+    data: { name: `${UNIQUE} Conta Luz`, amount: 30000, dueDay: 10, organizationId: testOrgId },
   });
   fixedExpenseId = expense.id;
   const now = new Date();
@@ -100,10 +103,11 @@ afterAll(async () => {
   await prisma.fixedExpense.delete({ where: { id: fixedExpenseId } });
 
   // Clean up finance settings
-  await prisma.financeSettings.deleteMany({ where: { id: 'singleton' } });
+  await prisma.financeSettings.deleteMany({ where: { organizationId: testOrgId } });
 
   // Clean up users
   await prisma.user.deleteMany({ where: { email: { startsWith: UNIQUE } } });
+  await prisma.organization.deleteMany({ where: { name: { startsWith: `Org ${UNIQUE}` } } });
 
   await prisma.$disconnect();
 });

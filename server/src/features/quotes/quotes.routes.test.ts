@@ -10,14 +10,17 @@ let salesToken: string
 let clientId: string
 let productId: string
 let kitId: string
+let testOrgId: string
 const createdQuoteIds: string[] = []
 
 beforeAll(async () => {
+  const org = await prisma.organization.create({ data: { name: `Org ${UNIQUE}` } })
+  testOrgId = org.id
   const pw = await hashPassword('TestPass123!')
   await prisma.user.createMany({
     data: [
-      { email: `${UNIQUE}-admin@test.com`, passwordHash: pw, role: 'ADMIN' },
-      { email: `${UNIQUE}-sales@test.com`, passwordHash: pw, role: 'SALES' },
+      { email: `${UNIQUE}-admin@test.com`, passwordHash: pw, role: 'ADMIN', organizationId: testOrgId },
+      { email: `${UNIQUE}-sales@test.com`, passwordHash: pw, role: 'SALES', organizationId: testOrgId },
     ],
   })
   const users = await prisma.user.findMany({
@@ -28,14 +31,16 @@ beforeAll(async () => {
   adminToken = signAccessToken({
     userId: byEmail[`${UNIQUE}-admin@test.com`].id,
     role: byEmail[`${UNIQUE}-admin@test.com`].role,
+    organizationId: testOrgId,
   })
   salesToken = signAccessToken({
     userId: byEmail[`${UNIQUE}-sales@test.com`].id,
     role: byEmail[`${UNIQUE}-sales@test.com`].role,
+    organizationId: testOrgId,
   })
 
   const client = await prisma.client.create({
-    data: { name: `${UNIQUE} Client`, taxId: `${Date.now()}` },
+    data: { name: `${UNIQUE} Client`, taxId: `${Date.now()}`, organizationId: testOrgId },
   })
   clientId = client.id
 
@@ -46,6 +51,7 @@ beforeAll(async () => {
       markupPercent: 20,
       finalPrice: 12000,
       stockQty: 0,
+      organizationId: testOrgId,
     },
   })
   productId = product.id
@@ -54,6 +60,7 @@ beforeAll(async () => {
     data: {
       name: `${UNIQUE} Kit`,
       totalPrice: 25000,
+      organizationId: testOrgId,
       items: { create: [{ productId, quantity: 2 }] },
     },
   })
@@ -89,6 +96,7 @@ afterAll(async () => {
   await prisma.product.delete({ where: { id: productId } })
   await prisma.client.delete({ where: { id: clientId } })
   await prisma.user.deleteMany({ where: { email: { startsWith: UNIQUE } } })
+  await prisma.organization.deleteMany({ where: { name: { startsWith: `Org ${UNIQUE}` } } })
   await prisma.$disconnect()
 })
 

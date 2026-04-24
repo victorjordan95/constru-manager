@@ -11,14 +11,17 @@ const FINANCE_EMAIL = `${UNIQUE}-finance@test.com`;
 let adminToken: string;
 let salesToken: string;
 let financeToken: string;
+let testOrgId: string;
 
 beforeAll(async () => {
+  const org = await prisma.organization.create({ data: { name: `Org ${UNIQUE}` } });
+  testOrgId = org.id;
   const pw = await hashPassword('TestPass123!');
   await prisma.user.createMany({
     data: [
-      { email: ADMIN_EMAIL, passwordHash: pw, role: 'ADMIN' },
-      { email: SALES_EMAIL, passwordHash: pw, role: 'SALES' },
-      { email: FINANCE_EMAIL, passwordHash: pw, role: 'FINANCE' },
+      { email: ADMIN_EMAIL, passwordHash: pw, role: 'ADMIN', organizationId: testOrgId },
+      { email: SALES_EMAIL, passwordHash: pw, role: 'SALES', organizationId: testOrgId },
+      { email: FINANCE_EMAIL, passwordHash: pw, role: 'FINANCE', organizationId: testOrgId },
     ],
   });
   const users = await prisma.user.findMany({
@@ -26,14 +29,15 @@ beforeAll(async () => {
     select: { id: true, email: true, role: true },
   });
   const byEmail = Object.fromEntries(users.map(u => [u.email, u]));
-  adminToken = signAccessToken({ userId: byEmail[ADMIN_EMAIL].id, role: byEmail[ADMIN_EMAIL].role });
-  salesToken = signAccessToken({ userId: byEmail[SALES_EMAIL].id, role: byEmail[SALES_EMAIL].role });
-  financeToken = signAccessToken({ userId: byEmail[FINANCE_EMAIL].id, role: byEmail[FINANCE_EMAIL].role });
+  adminToken = signAccessToken({ userId: byEmail[ADMIN_EMAIL].id, role: byEmail[ADMIN_EMAIL].role, organizationId: testOrgId });
+  salesToken = signAccessToken({ userId: byEmail[SALES_EMAIL].id, role: byEmail[SALES_EMAIL].role, organizationId: testOrgId });
+  financeToken = signAccessToken({ userId: byEmail[FINANCE_EMAIL].id, role: byEmail[FINANCE_EMAIL].role, organizationId: testOrgId });
 });
 
 afterAll(async () => {
   await prisma.client.deleteMany({ where: { taxId: { startsWith: UNIQUE } } });
   await prisma.user.deleteMany({ where: { email: { startsWith: UNIQUE } } });
+  await prisma.organization.deleteMany({ where: { name: { startsWith: `Org ${UNIQUE}` } } });
   await prisma.$disconnect();
 });
 
@@ -128,7 +132,7 @@ describe('GET /clients/:id', () => {
   let clientId: string;
 
   beforeAll(async () => {
-    const c = await prisma.client.create({ data: { name: 'Lookup Corp', taxId: `${UNIQUE}-get` } });
+    const c = await prisma.client.create({ data: { name: 'Lookup Corp', taxId: `${UNIQUE}-get`, organizationId: testOrgId } });
     clientId = c.id;
   });
 
@@ -156,7 +160,7 @@ describe('PUT /clients/:id', () => {
   let clientId: string;
 
   beforeAll(async () => {
-    const c = await prisma.client.create({ data: { name: 'Old Name', taxId: `${UNIQUE}-put` } });
+    const c = await prisma.client.create({ data: { name: 'Old Name', taxId: `${UNIQUE}-put`, organizationId: testOrgId } });
     clientId = c.id;
   });
 
@@ -193,7 +197,7 @@ describe('DELETE /clients/:id', () => {
   let clientId: string;
 
   beforeAll(async () => {
-    const c = await prisma.client.create({ data: { name: 'To Delete', taxId: `${UNIQUE}-del` } });
+    const c = await prisma.client.create({ data: { name: 'To Delete', taxId: `${UNIQUE}-del`, organizationId: testOrgId } });
     clientId = c.id;
   });
 
@@ -210,7 +214,7 @@ describe('DELETE /clients/:id', () => {
   });
 
   it('returns 403 for SALES role', async () => {
-    const c = await prisma.client.create({ data: { name: 'Protected', taxId: `${UNIQUE}-del2` } });
+    const c = await prisma.client.create({ data: { name: 'Protected', taxId: `${UNIQUE}-del2`, organizationId: testOrgId } });
     const res = await request(app)
       .delete(`/clients/${c.id}`)
       .set('Authorization', `Bearer ${salesToken}`);
