@@ -110,3 +110,15 @@ export interface AcceptQuotePayload {
   downPayment: number
   installments?: InstallmentPayload[]
 }
+
+export interface StockWarning {
+  productId: string
+  productName: string
+  stockQty: number
+  minStock: number | null
+}
+
+export interface AcceptQuoteResponse {
+  quote: Quote
+  stockWarnings: StockWarning[]
+}

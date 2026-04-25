@@ -3,15 +3,16 @@ import { useAcceptQuote } from './hooks'
 import { formatCurrency } from '@/lib/format'
 import { calculateInstallments } from '@/lib/installments'
 import { maskCurrency, parseCurrencyInput } from '@/lib/currencyInput'
-import type { InstallmentPayload } from './types'
+import type { InstallmentPayload, StockWarning } from './types'
 
 interface Props {
   quoteId: string
   total: number   // integer cents — from activeVersion.total
   onClose: () => void
+  onAccepted: (warnings: StockWarning[]) => void
 }
 
-export function AcceptQuoteModal({ quoteId, total, onClose }: Props) {
+export function AcceptQuoteModal({ quoteId, total, onClose, onAccepted }: Props) {
   const acceptMutation = useAcceptQuote()
   const [paymentType, setPaymentType] = useState<'LUMP_SUM' | 'INSTALLMENTS'>('LUMP_SUM')
   const [downPaymentStr, setDownPaymentStr] = useState('')
@@ -49,7 +50,7 @@ export function AcceptQuoteModal({ quoteId, total, onClose }: Props) {
     }
 
     try {
-      await acceptMutation.mutateAsync({
+      const result = await acceptMutation.mutateAsync({
         id: quoteId,
         payload: {
           paymentType,
@@ -57,7 +58,7 @@ export function AcceptQuoteModal({ quoteId, total, onClose }: Props) {
           ...(installments && { installments }),
         },
       })
-      onClose()
+      onAccepted(result.stockWarnings)
     } catch (err: unknown) {
       const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code
       if (code === 'QUOTE_NOT_FOUND') setServerError('Orçamento não encontrado.')

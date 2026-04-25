@@ -68,6 +68,7 @@ export function useAcceptQuote() {
     onSuccess: (_data, { id }) => {
       void qc.invalidateQueries({ queryKey: ['quotes', id] })
       void qc.invalidateQueries({ queryKey: ['quotes'] })
+      void qc.invalidateQueries({ queryKey: ['products'] })
     },
   })
 }

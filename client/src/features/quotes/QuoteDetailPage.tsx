@@ -5,7 +5,7 @@ import { generateQuotePDF } from './QuotePDF'
 import { STATUS_LABEL, STATUS_COLOR } from './statusLabels'
 import { formatCurrency } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
-import type { QuoteVersion } from './types'
+import type { QuoteVersion, StockWarning } from './types'
 import { AcceptQuoteModal } from './AcceptQuoteModal'
 
 export function QuoteDetailPage() {
@@ -13,6 +13,7 @@ export function QuoteDetailPage() {
   const { data: quote, isLoading, error } = useQuote(params.id)
   const { user } = useAuthStore()
   const [showAcceptModal, setShowAcceptModal] = useState(false)
+  const [stockWarnings, setStockWarnings] = useState<StockWarning[]>([])
   const updateStatusMutation = useUpdateStatus()
   const navigate = useNavigate()
   const duplicateMutation = useDuplicateQuote()
@@ -39,6 +40,63 @@ export function QuoteDetailPage() {
 
   return (
     <div style={{ maxWidth: 800 }}>
+      {stockWarnings.length > 0 && (
+        <div
+          style={{
+            background: 'var(--color-warning-bg)',
+            border: '1px solid var(--color-warning)',
+            borderRadius: 8,
+            padding: 'var(--space-2)',
+            marginBottom: 'var(--space-3)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <p style={{ fontWeight: 600, color: 'var(--color-warning)', marginBottom: 'var(--space-1)' }}>
+                Atenção: reposição de estoque necessária
+              </p>
+              <table style={{ borderCollapse: 'collapse', fontSize: '0.875rem', width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '2px 8px', color: 'var(--color-neutral-600)' }}>Produto</th>
+                    <th style={{ textAlign: 'right', padding: '2px 8px', color: 'var(--color-neutral-600)' }}>Estoque atual</th>
+                    <th style={{ textAlign: 'right', padding: '2px 8px', color: 'var(--color-neutral-600)' }}>Mínimo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stockWarnings.map((w) => (
+                    <tr key={w.productId} style={{ borderTop: '1px solid var(--color-warning)' }}>
+                      <td style={{ padding: '2px 8px' }}>{w.productName}</td>
+                      <td style={{ padding: '2px 8px', textAlign: 'right', fontWeight: 700, color: w.stockQty < 0 ? 'var(--color-danger)' : 'var(--color-warning)' }}>
+                        {w.stockQty}
+                      </td>
+                      <td style={{ padding: '2px 8px', textAlign: 'right', color: 'var(--color-neutral-600)' }}>
+                        {w.minStock ?? '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <button
+              onClick={() => setStockWarnings([])}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--color-warning)',
+                fontWeight: 700,
+                fontSize: '1rem',
+                marginLeft: 'var(--space-2)',
+                flexShrink: 0,
+              }}
+              aria-label="Fechar aviso"
+            >
+              OK, entendi
+            </button>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div style={{ marginBottom: 'var(--space-3)' }}>
         <Link to="/quotes" style={{ color: 'var(--color-primary)', fontSize: '0.875rem', textDecoration: 'none' }}>
@@ -292,6 +350,10 @@ export function QuoteDetailPage() {
           quoteId={quote.id}
           total={quote.activeVersion!.total}
           onClose={() => setShowAcceptModal(false)}
+          onAccepted={(warnings) => {
+            setShowAcceptModal(false)
+            setStockWarnings(warnings)
+          }}
         />
       )}
     </div>

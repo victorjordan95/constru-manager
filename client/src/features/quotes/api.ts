@@ -6,6 +6,7 @@ import type {
   AddVersionPayload,
   UpdateStatusPayload,
   AcceptQuotePayload,
+  AcceptQuoteResponse,
 } from './types'
 
 export async function listQuotes(): Promise<QuoteListItem[]> {
@@ -33,8 +34,8 @@ export async function updateStatus(id: string, payload: UpdateStatusPayload): Pr
   return data
 }
 
-export async function acceptQuote(id: string, payload: AcceptQuotePayload): Promise<Quote> {
-  const { data } = await api.post<Quote>(`/quotes/${id}/accept`, payload)
+export async function acceptQuote(id: string, payload: AcceptQuotePayload): Promise<AcceptQuoteResponse> {
+  const { data } = await api.post<AcceptQuoteResponse>(`/quotes/${id}/accept`, payload)
   return data
 }
 
