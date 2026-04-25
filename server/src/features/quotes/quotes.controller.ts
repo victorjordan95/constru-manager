@@ -92,6 +92,6 @@ export async function handleAcceptQuote(req: Request, res: Response, next: NextF
       const status = code === 'NOT_FOUND' ? 404 : 400
       res.status(status).json({ error: code, code }); return
     }
-    res.json(result.quote)
+    res.json({ quote: result.quote, stockWarnings: result.stockWarnings })
   } catch (err) { next(err) }
 }

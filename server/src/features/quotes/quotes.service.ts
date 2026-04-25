@@ -6,6 +6,13 @@ import {
   AcceptQuoteInput,
 } from './quotes.types'
 
+export type StockWarning = {
+  productId: string
+  productName: string
+  stockQty: number
+  minStock: number | null
+}
+
 // ─── Pure helper ──────────────────────────────────────────────────────────────
 
 export function computeVersionTotals(
@@ -285,13 +292,45 @@ export async function duplicateQuote(id: string, organizationId: string) {
 export async function acceptQuote(id: string, organizationId: string, data: AcceptQuoteInput) {
   const quote = await prisma.quote.findFirst({
     where: { id, organizationId },
-    include: { activeVersion: true, sale: true },
+    include: {
+      activeVersion: {
+        include: {
+          items: {
+            include: {
+              kit: { include: { items: { include: { product: { select: { id: true, name: true } } } } } },
+              product: { select: { id: true, name: true } },
+            },
+          },
+        },
+      },
+      sale: true,
+    },
   })
   if (!quote) return { error: 'NOT_FOUND' as const }
   if (quote.status === 'ACCEPTED') return { error: 'ALREADY_ACCEPTED' as const }
   if (!quote.activeVersion) return { error: 'NO_ACTIVE_VERSION' as const }
 
   const total = quote.activeVersion.total
+
+  // Build map of productId → { qty, name } across all items (direct + kit-expanded)
+  const productQtyMap = new Map<string, { qty: number; name: string }>()
+  for (const item of quote.activeVersion.items) {
+    if (item.productId && item.product) {
+      const prev = productQtyMap.get(item.productId)
+      productQtyMap.set(item.productId, {
+        qty: (prev?.qty ?? 0) + item.quantity,
+        name: item.product.name,
+      })
+    } else if (item.kitId && item.kit) {
+      for (const kitItem of item.kit.items) {
+        const prev = productQtyMap.get(kitItem.productId)
+        productQtyMap.set(kitItem.productId, {
+          qty: (prev?.qty ?? 0) + kitItem.quantity * item.quantity,
+          name: kitItem.product?.name ?? kitItem.productId,
+        })
+      }
+    }
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.sale.create({
@@ -313,6 +352,21 @@ export async function acceptQuote(id: string, organizationId: string, data: Acce
       },
     })
     await tx.quote.update({ where: { id }, data: { status: 'ACCEPTED' } })
+
+    for (const [productId, { qty }] of productQtyMap) {
+      await tx.product.update({
+        where: { id: productId },
+        data: { stockQty: { decrement: qty } },
+      })
+      await tx.stockMovement.create({
+        data: {
+          productId,
+          type: 'OUTFLOW',
+          quantity: qty,
+          reason: `Aprovação do orçamento ${id}`,
+        },
+      })
+    }
   })
 
   const updatedQuote = await prisma.quote.findUnique({
@@ -320,5 +374,23 @@ export async function acceptQuote(id: string, organizationId: string, data: Acce
     include: quoteDetailInclude,
   })
 
-  return { quote: updatedQuote }
+  const stockWarnings: StockWarning[] = []
+  if (productQtyMap.size > 0) {
+    const updatedProducts = await prisma.product.findMany({
+      where: { id: { in: [...productQtyMap.keys()] } },
+      select: { id: true, name: true, stockQty: true, minStock: true },
+    })
+    for (const p of updatedProducts) {
+      if (p.stockQty < 0 || (p.minStock !== null && p.stockQty < p.minStock)) {
+        stockWarnings.push({
+          productId: p.id,
+          productName: p.name,
+          stockQty: p.stockQty,
+          minStock: p.minStock,
+        })
+      }
+    }
+  }
+
+  return { quote: updatedQuote, stockWarnings }
 }

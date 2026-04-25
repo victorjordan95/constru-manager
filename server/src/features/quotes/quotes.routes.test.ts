@@ -93,6 +93,7 @@ afterAll(async () => {
   }
   await prisma.kitItem.deleteMany({ where: { kitId } })
   await prisma.kit.delete({ where: { id: kitId } })
+  await prisma.stockMovement.deleteMany({ where: { productId } })
   await prisma.product.delete({ where: { id: productId } })
   await prisma.client.delete({ where: { id: clientId } })
   await prisma.user.deleteMany({ where: { email: { startsWith: UNIQUE } } })
@@ -416,12 +417,13 @@ describe('POST /quotes/:id/accept', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ paymentType: 'LUMP_SUM', downPayment: 5000 })
     expect(res.status).toBe(200)
-    expect(res.body.status).toBe('ACCEPTED')
+    expect(res.body.quote.status).toBe('ACCEPTED')
     // subtotal = 12000*2 = 24000; total = 24000 + 1000 = 25000
-    expect(res.body.sale.total).toBe(25000)
-    expect(res.body.sale.paymentType).toBe('LUMP_SUM')
-    expect(res.body.sale.downPayment).toBe(5000)
-    expect(res.body.sale.installments).toHaveLength(0)
+    expect(res.body.quote.sale.total).toBe(25000)
+    expect(res.body.quote.sale.paymentType).toBe('LUMP_SUM')
+    expect(res.body.quote.sale.downPayment).toBe(5000)
+    expect(res.body.quote.sale.installments).toHaveLength(0)
+    expect(Array.isArray(res.body.stockWarnings)).toBe(true)
   })
 
   it('accepts with INSTALLMENTS — status ACCEPTED, sale + installments created', async () => {
@@ -437,11 +439,12 @@ describe('POST /quotes/:id/accept', () => {
         ],
       })
     expect(res.status).toBe(200)
-    expect(res.body.status).toBe('ACCEPTED')
-    expect(res.body.sale.paymentType).toBe('INSTALLMENTS')
-    expect(res.body.sale.installments).toHaveLength(2)
-    expect(res.body.sale.installments[0].amount).toBe(6000)
-    expect(res.body.sale.installments[0].status).toBe('PENDING')
+    expect(res.body.quote.status).toBe('ACCEPTED')
+    expect(res.body.quote.sale.paymentType).toBe('INSTALLMENTS')
+    expect(res.body.quote.sale.installments).toHaveLength(2)
+    expect(res.body.quote.sale.installments[0].amount).toBe(6000)
+    expect(res.body.quote.sale.installments[0].status).toBe('PENDING')
+    expect(Array.isArray(res.body.stockWarnings)).toBe(true)
   })
 
   it('returns 400 ALREADY_ACCEPTED when quote is already accepted', async () => {
@@ -493,5 +496,123 @@ describe('POST /quotes/:id/accept', () => {
       .post(`/quotes/${lumpSumQuoteId}/accept`)
       .send({ paymentType: 'LUMP_SUM' })
     expect(res.status).toBe(401)
+  })
+
+  it('deducts stockQty for direct product items when accepted', async () => {
+    const localProduct = await prisma.product.create({
+      data: {
+        name: `${UNIQUE} StockProd`,
+        basePrice: 10000,
+        markupPercent: 0,
+        finalPrice: 10000,
+        stockQty: 10,
+        organizationId: testOrgId,
+      },
+    })
+
+    const createRes = await request(app)
+      .post('/quotes')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ clientId, items: [{ productId: localProduct.id, quantity: 3 }] })
+    const qId = createRes.body.id
+    createdQuoteIds.push(qId)
+
+    await request(app)
+      .post(`/quotes/${qId}/accept`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ paymentType: 'LUMP_SUM' })
+
+    const after = await prisma.product.findUnique({ where: { id: localProduct.id } })
+    expect(after!.stockQty).toBe(7) // 10 - 3
+
+    const movements = await prisma.stockMovement.findMany({ where: { productId: localProduct.id } })
+    expect(movements).toHaveLength(1)
+    expect(movements[0].type).toBe('OUTFLOW')
+    expect(movements[0].quantity).toBe(3)
+    expect(movements[0].reason).toContain(qId)
+
+    // cleanup
+    await prisma.stockMovement.deleteMany({ where: { productId: localProduct.id } })
+    await prisma.product.delete({ where: { id: localProduct.id } })
+  })
+
+  it('deducts stockQty for kit items (kitItem.quantity × quoteItem.quantity) when accepted', async () => {
+    const localProduct = await prisma.product.create({
+      data: {
+        name: `${UNIQUE} KitStockProd`,
+        basePrice: 10000,
+        markupPercent: 0,
+        finalPrice: 10000,
+        stockQty: 20,
+        organizationId: testOrgId,
+      },
+    })
+    const localKit = await prisma.kit.create({
+      data: {
+        name: `${UNIQUE} LocalKit`,
+        totalPrice: 30000,
+        organizationId: testOrgId,
+        items: { create: [{ productId: localProduct.id, quantity: 4 }] },
+      },
+    })
+
+    const createRes = await request(app)
+      .post('/quotes')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ clientId, items: [{ kitId: localKit.id, quantity: 2 }] })
+    const qId = createRes.body.id
+    createdQuoteIds.push(qId)
+
+    await request(app)
+      .post(`/quotes/${qId}/accept`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ paymentType: 'LUMP_SUM' })
+
+    // 4 (kitItem.quantity) × 2 (quoteItem.quantity) = 8 deducted; 20 - 8 = 12
+    const after = await prisma.product.findUnique({ where: { id: localProduct.id } })
+    expect(after!.stockQty).toBe(12)
+
+    // cleanup
+    await prisma.stockMovement.deleteMany({ where: { productId: localProduct.id } })
+    await prisma.kitItem.deleteMany({ where: { kitId: localKit.id } })
+    await prisma.kit.delete({ where: { id: localKit.id } })
+    await prisma.product.delete({ where: { id: localProduct.id } })
+  })
+
+  it('returns stockWarnings when accepted and product stock goes negative', async () => {
+    const localProduct = await prisma.product.create({
+      data: {
+        name: `${UNIQUE} LowStockProd`,
+        basePrice: 10000,
+        markupPercent: 0,
+        finalPrice: 10000,
+        stockQty: 1,
+        minStock: 5,
+        organizationId: testOrgId,
+      },
+    })
+
+    const createRes = await request(app)
+      .post('/quotes')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ clientId, items: [{ productId: localProduct.id, quantity: 3 }] })
+    const qId = createRes.body.id
+    createdQuoteIds.push(qId)
+
+    const res = await request(app)
+      .post(`/quotes/${qId}/accept`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ paymentType: 'LUMP_SUM' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.quote.status).toBe('ACCEPTED')
+    expect(res.body.stockWarnings).toHaveLength(1)
+    expect(res.body.stockWarnings[0].productId).toBe(localProduct.id)
+    expect(res.body.stockWarnings[0].stockQty).toBe(-2) // 1 - 3
+    expect(res.body.stockWarnings[0].minStock).toBe(5)
+
+    // cleanup
+    await prisma.stockMovement.deleteMany({ where: { productId: localProduct.id } })
+    await prisma.product.delete({ where: { id: localProduct.id } })
   })
 })
