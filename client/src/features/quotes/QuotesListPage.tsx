@@ -188,6 +188,7 @@ export function QuotesListPage() {
           quoteId={acceptModal.quoteId}
           total={acceptModal.total}
           onClose={() => setAcceptModal(null)}
+          onAccepted={() => setAcceptModal(null)}
         />
       )}
     </div>
