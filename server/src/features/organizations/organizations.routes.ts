@@ -6,12 +6,25 @@ import {
   handleCreateOrg,
   handleUpdateOrg,
   handleCreateAdmin,
+  handleGetCurrentOrg,
+  handleUploadLogo,
+  upload,
 } from './organizations.controller';
 
 export const organizationsRouter = Router();
 
-organizationsRouter.use(authenticate, authorize('SUPER_ADMIN'));
+// Routes accessible without SUPER_ADMIN (must come before the use() call below)
+organizationsRouter.get('/current', authenticate, handleGetCurrentOrg);
+organizationsRouter.post(
+  '/:id/logo',
+  authenticate,
+  authorize('ADMIN', 'SUPER_ADMIN'),
+  upload.single('logo'),
+  handleUploadLogo,
+);
 
+// SUPER_ADMIN-only routes
+organizationsRouter.use(authenticate, authorize('SUPER_ADMIN'));
 organizationsRouter.get('/', handleListOrgs);
 organizationsRouter.post('/', handleCreateOrg);
 organizationsRouter.patch('/:id', handleUpdateOrg);

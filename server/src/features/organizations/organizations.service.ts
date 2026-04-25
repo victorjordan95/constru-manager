@@ -29,3 +29,14 @@ export async function createAdminForOrg(organizationId: string, email: string, p
   });
   return { user };
 }
+
+export async function getCurrentOrg(organizationId: string) {
+  return prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { id: true, name: true, logoUrl: true },
+  });
+}
+
+export async function updateOrgLogoUrl(id: string, logoUrl: string) {
+  return prisma.organization.update({ where: { id }, data: { logoUrl } });
+}

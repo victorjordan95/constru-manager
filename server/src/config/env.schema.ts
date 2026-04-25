@@ -8,6 +8,9 @@ export const envSchema = z.object({
   JWT_REFRESH_EXPIRES_IN: z.string(),
   CORS_ORIGIN: z.string().url('CORS_ORIGIN must be a valid URL'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  CLOUDINARY_CLOUD_NAME: z.string().min(1),
+  CLOUDINARY_API_KEY: z.string().min(1),
+  CLOUDINARY_API_SECRET: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

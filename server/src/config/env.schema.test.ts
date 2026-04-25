@@ -8,6 +8,9 @@ const validEnv = {
   JWT_REFRESH_EXPIRES_IN: '7d',
   CORS_ORIGIN: 'http://localhost:5173',
   NODE_ENV: 'test' as const,
+  CLOUDINARY_CLOUD_NAME: 'my-cloud',
+  CLOUDINARY_API_KEY: 'my-api-key',
+  CLOUDINARY_API_SECRET: 'my-api-secret',
 };
 
 describe('envSchema', () => {

@@ -1,10 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import multer from 'multer';
+import { AuthenticatedRequest } from '../auth/auth.types';
+import { uploadImageBuffer } from '../../lib/cloudinary';
 import {
   listOrganizations,
   createOrganization,
   updateOrganization,
   createAdminForOrg,
+  getCurrentOrg,
+  updateOrgLogoUrl,
 } from './organizations.service';
 
 const createOrgSchema = z.object({ name: z.string().min(1) });
@@ -15,6 +20,15 @@ const updateOrgSchema = z.object({
 const createAdminSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
+});
+
+export const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('FILE_TYPE_INVALID'));
+  },
 });
 
 export async function handleListOrgs(_req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -74,6 +88,50 @@ export async function handleCreateAdmin(req: Request, res: Response, next: NextF
       return;
     }
     res.status(201).json(result.user);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleGetCurrentOrg(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { organizationId } = (req as AuthenticatedRequest).user;
+    if (!organizationId) {
+      res.status(400).json({ error: 'No organization', code: 'NO_ORGANIZATION' });
+      return;
+    }
+    const org = await getCurrentOrg(organizationId);
+    if (!org) {
+      res.status(404).json({ error: 'Organization not found', code: 'NOT_FOUND' });
+      return;
+    }
+    res.json(org);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleUploadLogo(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { organizationId, role } = (req as AuthenticatedRequest).user;
+    const targetId = req.params.id as string;
+
+    if (role === 'ADMIN' && organizationId !== targetId) {
+      res.status(403).json({ error: 'FORBIDDEN', code: 'FORBIDDEN' });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ error: 'FILE_REQUIRED', code: 'FILE_REQUIRED' });
+      return;
+    }
+
+    const logoUrl = await uploadImageBuffer(req.file.buffer, 'org-logos');
+    const org = await updateOrgLogoUrl(targetId, logoUrl);
+    if (!org) {
+      res.status(404).json({ error: 'Organization not found', code: 'NOT_FOUND' });
+      return;
+    }
+    res.json({ logoUrl });
   } catch (err) {
     next(err);
   }
