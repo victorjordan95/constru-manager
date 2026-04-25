@@ -5,13 +5,14 @@ import { STATUS_LABEL, STATUS_COLOR } from './statusLabels'
 import { formatCurrency } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
 import { AcceptQuoteModal } from './AcceptQuoteModal'
-import type { QuoteStatus } from './types'
+import type { QuoteStatus, StockWarning } from './types'
 
 export function QuotesListPage() {
   const { data: quotes, isLoading, error } = useQuotes()
   const { user } = useAuthStore()
   const updateStatusMutation = useUpdateStatus()
   const [acceptModal, setAcceptModal] = useState<{ quoteId: string; total: number } | null>(null)
+  const [stockWarnings, setStockWarnings] = useState<StockWarning[]>([])
 
   const isAdmin = user?.role === 'ADMIN'
   const navigate = useNavigate()
@@ -183,12 +184,80 @@ export function QuotesListPage() {
         </table>
       </div>
 
+      {stockWarnings.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 200,
+            background: 'var(--color-warning-bg)',
+            border: '1px solid var(--color-warning)',
+            borderRadius: 8,
+            padding: 'var(--space-2)',
+            minWidth: 340,
+            maxWidth: 560,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontWeight: 600, color: 'var(--color-warning)', marginBottom: 'var(--space-1)' }}>
+                Atenção: reposição de estoque necessária
+              </p>
+              <table style={{ borderCollapse: 'collapse', fontSize: '0.875rem', width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '2px 8px', color: 'var(--color-neutral-600)' }}>Produto</th>
+                    <th style={{ textAlign: 'right', padding: '2px 8px', color: 'var(--color-neutral-600)' }}>Estoque atual</th>
+                    <th style={{ textAlign: 'right', padding: '2px 8px', color: 'var(--color-neutral-600)' }}>Mínimo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stockWarnings.map((w) => (
+                    <tr key={w.productId} style={{ borderTop: '1px solid var(--color-warning)' }}>
+                      <td style={{ padding: '2px 8px' }}>{w.productName}</td>
+                      <td style={{ padding: '2px 8px', textAlign: 'right', fontWeight: 700, color: w.stockQty < 0 ? 'var(--color-danger)' : 'var(--color-warning)' }}>
+                        {w.stockQty}
+                      </td>
+                      <td style={{ padding: '2px 8px', textAlign: 'right', color: 'var(--color-neutral-600)' }}>
+                        {w.minStock ?? '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <button
+              onClick={() => setStockWarnings([])}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--color-warning)',
+                fontWeight: 700,
+                fontSize: '1rem',
+                marginLeft: 'var(--space-2)',
+                flexShrink: 0,
+              }}
+              aria-label="Fechar aviso"
+            >
+              OK, entendi
+            </button>
+          </div>
+        </div>
+      )}
+
       {acceptModal && (
         <AcceptQuoteModal
           quoteId={acceptModal.quoteId}
           total={acceptModal.total}
           onClose={() => setAcceptModal(null)}
-          onAccepted={() => setAcceptModal(null)}
+          onAccepted={(warnings) => {
+            setAcceptModal(null)
+            setStockWarnings(warnings)
+          }}
         />
       )}
     </div>
