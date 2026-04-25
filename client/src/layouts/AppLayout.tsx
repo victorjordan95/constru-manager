@@ -2,10 +2,12 @@ import { Outlet, Link, useNavigate } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/authStore'
 import { queryClient } from '@/lib/queryClient'
 import { logout as apiLogout } from '@/features/auth/api'
+import { useCurrentOrganization } from '@/features/organizations/hooks'
 
 export function AppLayout() {
   const { user, clearAuth } = useAuthStore()
   const navigate = useNavigate()
+  const { data: currentOrg } = useCurrentOrganization()
 
   async function handleLogout() {
     try {
@@ -39,9 +41,17 @@ export function AppLayout() {
           flexDirection: 'column',
         }}
       >
-        <p style={{ fontWeight: 700, marginBottom: 'var(--space-3)', fontSize: '1rem' }}>
-          Constru Manager
-        </p>
+        <div style={{ marginBottom: 'var(--space-3)' }}>
+          {currentOrg?.logoUrl ? (
+            <img
+              src={currentOrg.logoUrl}
+              alt={currentOrg.name}
+              style={{ maxHeight: 40, maxWidth: '100%', objectFit: 'contain', display: 'block' }}
+            />
+          ) : (
+            <p style={{ fontWeight: 700, fontSize: '1rem', margin: 0 }}>Constru Manager</p>
+          )}
+        </div>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
           {user?.role === 'SUPER_ADMIN' ? (
             <>
@@ -73,6 +83,9 @@ export function AppLayout() {
               )}
               {(user?.role === 'ADMIN' || user?.role === 'FINANCE') && (
                 <li><Link to="/fixed-expenses" style={linkStyle}>Despesas Fixas</Link></li>
+              )}
+              {user?.role === 'ADMIN' && (
+                <li><Link to="/settings" style={linkStyle}>Configurações</Link></li>
               )}
             </>
           )}

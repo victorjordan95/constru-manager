@@ -5,7 +5,7 @@ function fmt(cents: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
 }
 
-export function generateQuotePDF(quote: Quote): void {
+export async function generateQuotePDF(quote: Quote, logoUrl?: string | null): Promise<void> {
   const version = quote.activeVersion!;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
@@ -14,11 +14,33 @@ export function generateQuotePDF(quote: Quote): void {
   let y = margin + 5;
 
   // ── Header ──────────────────────────────────────────────────────────────────
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.setTextColor(30, 58, 95);
-  doc.text('Constru Manager', margin, y);
-  y += 7;
+  if (logoUrl) {
+    try {
+      const res = await fetch(logoUrl)
+      const blob = await res.blob()
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+      const format = dataUrl.split(';')[0].split('/')[1].toUpperCase() as 'JPEG' | 'PNG' | 'WEBP'
+      doc.addImage(dataUrl, format, margin, y - 5, 50, 18)
+      y += 18
+    } catch {
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(20)
+      doc.setTextColor(30, 58, 95)
+      doc.text('Constru Manager', margin, y)
+      y += 7
+    }
+  } else {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(20)
+    doc.setTextColor(30, 58, 95)
+    doc.text('Constru Manager', margin, y)
+    y += 7
+  }
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);

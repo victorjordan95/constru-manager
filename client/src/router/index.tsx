@@ -22,6 +22,7 @@ import { DrePage } from '@/features/finance/DrePage'
 import { UsersListPage } from '@/features/users/UsersListPage'
 import { UserFormPage } from '@/features/users/UserFormPage'
 import { OrganizationsPage } from '@/features/organizations/OrganizationsPage'
+import { OrganizationSettingsPage } from '@/features/organizations/OrganizationSettingsPage'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -209,6 +210,16 @@ const organizationsRoute = createRoute({
   },
 })
 
+const settingsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/settings',
+  component: OrganizationSettingsPage,
+  beforeLoad: () => {
+    const { user } = useAuthStore.getState()
+    if (user?.role !== 'ADMIN') throw redirect({ to: '/' })
+  },
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authenticatedRoute.addChildren([
@@ -234,6 +245,7 @@ const routeTree = rootRoute.addChildren([
     usersRoute,
     userCreateRoute,
     organizationsRoute,
+    settingsRoute,
   ]),
 ])
 

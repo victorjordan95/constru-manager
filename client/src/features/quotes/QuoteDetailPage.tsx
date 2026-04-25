@@ -7,19 +7,21 @@ import { formatCurrency } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
 import type { QuoteVersion, StockWarning } from './types'
 import { AcceptQuoteModal } from './AcceptQuoteModal'
+import { useCurrentOrganization } from '@/features/organizations/hooks'
 
 export function QuoteDetailPage() {
   const params = useParams({ strict: false }) as { id: string }
   const { data: quote, isLoading, error } = useQuote(params.id)
   const { user } = useAuthStore()
+  const { data: currentOrg } = useCurrentOrganization()
   const [showAcceptModal, setShowAcceptModal] = useState(false)
   const [stockWarnings, setStockWarnings] = useState<StockWarning[]>([])
   const updateStatusMutation = useUpdateStatus()
   const navigate = useNavigate()
   const duplicateMutation = useDuplicateQuote()
 
-  function handleDownloadPDF() {
-    if (quote?.activeVersion) generateQuotePDF(quote)
+  async function handleDownloadPDF() {
+    if (quote?.activeVersion) await generateQuotePDF(quote, currentOrg?.logoUrl)
   }
 
   async function handleDuplicate() {
@@ -235,7 +237,7 @@ export function QuoteDetailPage() {
           )}
           {quote.activeVersion && (
             <button
-              onClick={handleDownloadPDF}
+              onClick={() => void handleDownloadPDF()}
               style={{
                 background: 'var(--color-neutral-100)',
                 color: 'var(--color-neutral-900)',
