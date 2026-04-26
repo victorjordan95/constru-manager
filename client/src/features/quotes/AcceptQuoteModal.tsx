@@ -54,7 +54,7 @@ export function AcceptQuoteModal({ quoteId, total, onClose, onAccepted }: Props)
         id: quoteId,
         payload: {
           paymentType,
-          downPayment: downPaymentCents,
+          downPayment: paymentType === 'LUMP_SUM' ? total : downPaymentCents,
           ...(installments && { installments }),
         },
       })
@@ -163,19 +163,21 @@ export function AcceptQuoteModal({ quoteId, total, onClose, onAccepted }: Props)
             </select>
           </label>
 
-          {/* Down payment */}
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: '0.875rem', color: 'var(--color-neutral-600)', fontWeight: 500 }}>
-              Entrada (R$)
-            </span>
-            <input
-              inputMode="numeric"
-              value={downPaymentStr}
-              onChange={(e) => setDownPaymentStr(maskCurrency(e.target.value))}
-              style={inputStyle}
-              placeholder="0,00"
-            />
-          </label>
+          {/* Down payment — only relevant for installments */}
+          {paymentType === 'INSTALLMENTS' && (
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontSize: '0.875rem', color: 'var(--color-neutral-600)', fontWeight: 500 }}>
+                Entrada (R$)
+              </span>
+              <input
+                inputMode="numeric"
+                value={downPaymentStr}
+                onChange={(e) => setDownPaymentStr(maskCurrency(e.target.value))}
+                style={inputStyle}
+                placeholder="0,00"
+              />
+            </label>
+          )}
 
           {/* Installments section */}
           {paymentType === 'INSTALLMENTS' && (
