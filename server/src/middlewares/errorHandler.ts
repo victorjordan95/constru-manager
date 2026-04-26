@@ -14,9 +14,10 @@ export function errorHandler(
   const statusCode = err.statusCode ?? 500;
   const code = err.code ?? 'INTERNAL_ERROR';
 
-  // Never expose stack traces in production
   if (process.env.NODE_ENV !== 'production') {
     console.error(err);
+  } else {
+    console.error(`[${code}] ${err.message}`);
   }
 
   res.status(statusCode).json({

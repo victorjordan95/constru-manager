@@ -12,8 +12,13 @@ export async function uploadImageBuffer(buffer: Buffer, folder: string): Promise
     const stream = cloudinary.uploader.upload_stream(
       { folder, transformation: [{ width: 400, crop: 'limit' }] },
       (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
-        if (error || !result) reject(error ?? new Error('Upload failed'));
-        else resolve(result.secure_url);
+        if (error || !result) {
+          const msg = error?.message ?? 'Upload failed';
+          console.error('[Cloudinary]', error);
+          reject(new Error(msg));
+        } else {
+          resolve(result.secure_url);
+        }
       },
     );
     stream.end(buffer);
