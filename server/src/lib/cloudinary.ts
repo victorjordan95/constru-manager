@@ -1,4 +1,4 @@
-import { v2 as cloudinary } from 'cloudinary';
+import { v2 as cloudinary, UploadApiErrorResponse, UploadApiResponse } from 'cloudinary';
 import { env } from '../config/env';
 
 cloudinary.config({
@@ -11,7 +11,7 @@ export async function uploadImageBuffer(buffer: Buffer, folder: string): Promise
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       { folder, transformation: [{ width: 400, crop: 'limit' }] },
-      (error, result) => {
+      (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
         if (error || !result) reject(error ?? new Error('Upload failed'));
         else resolve(result.secure_url);
       },

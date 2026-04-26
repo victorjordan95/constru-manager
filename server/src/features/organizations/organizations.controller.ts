@@ -25,7 +25,7 @@ const createAdminSchema = z.object({
 export const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
+  fileFilter: (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
     if (file.mimetype.startsWith('image/')) cb(null, true);
     else cb(new Error('FILE_TYPE_INVALID'));
   },
