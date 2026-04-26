@@ -100,7 +100,7 @@ export async function generateQuotePDF(quote: Quote, logoUrl?: string | null): P
   doc.text('Qtd', colX[1] + 2, y);
   doc.text('Unit.', colX[2] + 2, y);
   doc.text('Total', colX[3] + 2, y);
-  y += 5;
+  y += 7;
 
   // Table rows
   doc.setFont('helvetica', 'normal');
